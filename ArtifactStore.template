@@ -1,13 +1,20 @@
+//TODO Create codepipeline role
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "An S3 bucket and CloudFormation distribution that may be used by other stacks for static assets ",
+  "Description": "A private S3 bucket which can be used by other stacks for codepipeline and Elastic Beanstalk artifact storage.",
   "Resources": {
-    "S3Bucket" : {
+    "ArtifactBucket" : {
       "Type" : "AWS::S3::Bucket",
       "Properties" : {
+        "BucketName" : {"Ref" : "AWS::StackName"},
         "AccessControl" : "Private"
-      },
-      "DeletionPolicy" : "Retain"
+      }
+    }
+  },
+  "Outputs" : {
+    "DomainName" : {
+      "Value" : { "Fn::GetAtt" : [ "ArtifactBucket", "DomainName" ] },
+      "Description" : "Url to the S3 Bucket"
     }
   }
 }

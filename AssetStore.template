@@ -1,32 +1,34 @@
 {
-  "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "A S3 bucket which can serve assets for other stacks",
-  "Resources": {
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "A public S3 bucket which can serve assets for other stacks.",
+  "Resources" : {
     "AssetBucketPolicy" : {
       "Type" : "AWS::S3::BucketPolicy",
       "Properties" : {
-        "Bucket" : {"Ref" : "AWS::StackName"},
-        "PolicyDocument": {
-          "Statement":[{
-            "Action":["s3:GetObject"],
-            "Effect":"Allow",
-            "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "AWS::StackName" } , "/*" ]]},
-            "Principal":"*"
-          }]
+        "Bucket" : { "Ref" : "AWS::StackName" },
+        "PolicyDocument" : {
+          "Statement" : [
+            {
+              "Action" : [ "s3:GetObject" ],
+              "Effect" : "Allow",
+              "Resource" : { "Fn::Join" : [ "", [ "arn:aws:s3:::", { "Ref" : "AWS::StackName" }, "/*" ] ] },
+              "Principal" : "*"
+            }
+          ]
         }
       }
     },
     "AssetBucket" : {
       "Type" : "AWS::S3::Bucket",
       "Properties" : {
-        "BucketName" : {"Ref": "AWS::StackName"}
+        "BucketName" : { "Ref" : "AWS::StackName" }
       },
       "DeletionPolicy" : "Retain"
     }
   },
   "Outputs" : {
-    "S3BucketSecureURL" : {
-      "Value" : { "Fn::Join" : [ "", [ "https://", { "Fn::GetAtt" : [ "AssetBucket", "DomainName" ] } ] ] },
+    "DomainName" : {
+      "Value" : { "Fn::GetAtt" : [ "AssetBucket", "DomainName" ] },
       "Description" : "Url to the S3 Bucket"
     }
   }

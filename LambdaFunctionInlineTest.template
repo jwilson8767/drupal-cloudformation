@@ -1,43 +1,8 @@
-//TODO create lambda function to encrypt admin key in DynamoDB upon creation
-//TODO move security group definition into this template
-//TODO move lambda role definition into this template
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description" : "A MySQL RDS instance which can be used by other stacks",
+  "Description" : "A test for inline lambda functions",
   "Parameters" : {
-    "InstanceType" : {
-      "Type" : "String",
-      "Default" : "db.t2.micro",
-      "AllowedValues" : [ "db.t2.micro", "db.t2.small", "db.t2.medium", "db.t2.large" ],
-      "Description" : "Enter db.t2.micro, db.t2.small, db.t2.medium, db.t2.large. Default is db.t2.micro."
-    },
-    "AllocatedStorage" : {
-      "Type" : "Number",
-      "Description" : "Storage for the RDS instance in GB",
-      "Default" : 10,
-      "MinValue" : 5,
-      "MaxValue" : 6144
-    },
-    "MySQLVersion" : {
-      "Type" : "String",
-      "Description" : "Storage for the RDS instance in GB. Use `aws rds describe-db-engine-versions --engine=mysql` to see all possible versions",
-      "Default" : "5.6.27",
-      "AllowedValues" : [
-        "5.6.19a",
-        "5.6.19b",
-        "5.6.21",
-        "5.6.21b",
-        "5.6.22",
-        "5.6.23",
-        "5.6.27",
-        "5.6.29",
-        "5.6.34",
-        "5.7.10",
-        "5.7.11",
-        "5.7.16"
-      ]
-    },
-    "AdminUser" : {
+    "AdminUsername" : {
       "Type" : "String",
       "Description" : "The database admin account username",
       "Default" : "admin",
@@ -60,6 +25,7 @@
     "LambdaRole" : {
       "Type" : "AWS::IAM::Role",
       "Properties" : {
+        "RoleName": { "Fn::Join" : [ "-", [ "cf-lambda-role", { "Ref": "AWS::StackName" } ] ] },
         "AssumeRolePolicyDocument" : {
           "Version" : "2012-10-17",
           "Statement" : [
@@ -70,7 +36,7 @@
         "Policies" : [
           {
             "PolicyName" : {
-              "Fn::Join" : [ "-", [ "cf", { "Ref" : "AWS::StackName" }, "lambda" ] ]
+              "Fn::Join" : [ "-", [ "cf-lambda-policy", { "Ref" : "AWS::StackName" }] ]
             },
             "PolicyDocument" : {
               "Version" : "2012-10-17",
@@ -114,21 +80,6 @@
         ]
       }
     },
-    "RDSInstance" : {
-      "Type" : "AWS::RDS::DBInstance",
-      "Properties" : {
-        "AllocatedStorage" : { "Ref" : "AllocatedStorage" },
-        "DBInstanceClass" : { "Ref" : "InstanceType" },
-        "EngineVersion" : { "Ref" : "MySQLVersion" },
-        "AutoMinorVersionUpgrade" : true,
-        "MultiAZ" : true,
-        "Engine" : "MySQL",
-        "MasterUsername" : { "Ref" : "AdminUser" },
-        "MasterUserPassword" : { "Ref" : "AdminPassword" },
-        "DBSubnetGroupName" : "default",
-        "VPCSecurityGroups" : [ "sg-1655546b" ]
-      }
-    },
     "LambdaFunctionEncryptCredentials" : {
       "Type" : "AWS::Lambda::Function",
       "Properties" : {
@@ -141,25 +92,22 @@
                 "import base64",
                 "import boto3",
                 "import cfnresponse",
-                "def lambda_handler(event, context):",
+                "def handler(event, context):",
                 "    if event['RequestType'] == 'Delete':",
-                "        return cfnresponse.send(event,context,cfnresponse.SUCCESS)",
-                "    try:",
-                "        client = boto3.client('kms')",
-                "        encryptedUsername = client.encrypt(",
-                "            KMSKeyArn=event['ResourceProperties']['KMSKeyArn'],",
-                "            Plaintext=event['ResourceProperties']['Username']",
-                "        )",
-                "        encryptedPassword = client.encrypt(",
-                "            KMSKeyArn=event['ResourceProperties']['KMSKeyArn'],",
-                "            Plaintext=event['ResourceProperties']['Password']",
-                "        )",
-                "        return cfnresponse.send(event,context,cfnresponse.SUCCESS,{",
-                "            'encryptedUsername': base64.b64encode(encryptedUsername['CiphertextBlob']),",
-                "            'encryptedPassword': base64.b64encode(encryptedPassword['CiphertextBlob'])",
-                "        })",
-                "    except Exception as E:",
-                "       return cfnresponse.send(event,context,cfnresponse.FAILED,{})"
+                "        return cfnresponse.send(event,context,cfnresponse.SUCCESS,{})",
+                "    client = boto3.client('kms')",
+                "    encryptedUsername = client.encrypt(",
+                "        KeyId=event['ResourceProperties']['KMSKeyARN'],",
+                "        Plaintext=event['ResourceProperties']['Username']",
+                "    )",
+                "    encryptedPassword = client.encrypt(",
+                "        KeyId=event['ResourceProperties']['KMSKeyARN'],",
+                "        Plaintext=event['ResourceProperties']['Password']",
+                "    )",
+                "    return cfnresponse.send(event,context,cfnresponse.SUCCESS,{",
+                "        'encryptedUsername': base64.b64encode(encryptedUsername['CiphertextBlob']),",
+                "        'encryptedPassword': base64.b64encode(encryptedPassword['CiphertextBlob'])",
+                "    },{})"
               ]
             ]
           }
@@ -173,29 +121,20 @@
       "Version" : "1.0",
       "Properties" : {
         "ServiceToken" : { "Fn::GetAtt" : [ "LambdaFunctionEncryptCredentials", "Arn" ] },
-        "KeyARN" : "arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71",
-        "PlainText" : { "Ref" : "AdminPassword" }
+        "KMSKeyARN" : "arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71",
+        "Username" : { "Ref" : "AdminUsername" },
+        "Password" : { "Ref" : "AdminPassword" }
       }
     }
   },
   "Outputs" : {
-    "Hostname" : {
-      "Value" : { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Address" ] },
-      "Description" : "Hostname of the RDS Instance"
-    },
-    "Port" : {
-      "Value" : { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Port" ] },
-      "Description" : "Port of the RDS Instance"
-    },
     "EncryptedAdminUsername" : {
-      "Value" : { "Fn::GetAtt" : [ "EncryptedCredentials", "CipherText" ] },
+      "Value" : { "Fn::GetAtt" : [ "EncryptedCredentials", "encryptedUsername" ] },
       "Description" : "KMS encrypted value of Admin Username (Base64 encoded)"
     },
     "EncryptedAdminPassword" : {
-      "Value" : { "Fn::GetAtt" : [ "EncryptedCredentials", "CipherText" ] },
+      "Value" : { "Fn::GetAtt" : [ "EncryptedCredentials", "encryptedPassword" ] },
       "Description" : "KMS encrypted value of Admin Password (Base64 encoded)"
     }
   }
 }
-
-
