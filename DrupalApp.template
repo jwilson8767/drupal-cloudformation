@@ -1,0 +1,139 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "An Elastic Beanstalk Application stack which uses CodePipeline for automated deployments.",
+  "Parameters" : {
+    "ApplicationTitle" : {
+      "Type" : "String",
+      "Description" : "The full public name of the application. Used as site title. Ex: 'The Science Analysis of The National Cohesive Wildland Fire Management Strategy'"
+    },
+    "GitRepository" : {
+      "Type" : "String",
+      "Description" : "The Github Repository to pull from. For example 'nemac/cohesivefire.nemac.org'"
+    },
+    "InstanceTypeParameter" : {
+      "Type" : "String",
+      "Default" : "t2.nano",
+      "AllowedValues" : ["t2.nano", "t2.micro", "t2.small", "t2.medium"],
+      "Description" : "Enter t2.nano, t2.micro, t2.small, or t2.medium. Default is t2.nano."
+    },
+    "MySQLStackName" : {
+      "Type" : "String",
+      "Description" : "The RDS stack that the production environment should use."
+    },
+    "DatabaseName" : {
+      "Type" : "String",
+      "Description" : "The Schema name to use. Ex: 'cohesivefire_nemac_org'"
+    },
+    "DatabaseUser" : {
+      "Type" : "String",
+      "Description" : "Username for Drupal to use to connect to the database"
+    },
+    "DatabasePassword" : {
+      "Type" : "String",
+      "Description" : "Password for Drupal to use to connect to the database",
+      "NoEcho" : "true"
+    }
+  },
+  "Resources": {
+    "ebDrupalEBApp": {
+      "Type": "AWS::ElasticBeanstalk::Application",
+      "Properties": {
+        "Description": {"Fn::Join": ["EB App for the ", { "Ref" : "AWS::StackName" } ," stack"]}
+      }
+    },
+
+//    "ebDrupalCodepipeline": {
+//      "Type" : "AWS::CodePipeline::Pipeline",
+//      "Properties" : {
+//        "ArtifactStore" : {
+//          "Type" : "S3",
+//          "Fn::Join" : [ "", [ "nemac-elasticbeanstalk/codepipeline-artifacts/" ,{"Ref": "ApplicationName"}] ]
+//        },
+//        "Name" : {"Ref" : "ApplicationName"},
+//        "RoleArn" : "codepipeline-role",
+//        "Stages": [
+//          {
+//            "Name": "Source",
+//            "Actions": [
+//              {
+//                "Name": "SourceAction",
+//                "ActionTypeId": {
+//                  "Category": "Source",
+//                  "Owner": "AWS",
+//                  "Version": "1",
+//                  "Provider": "S3"
+//                },
+//                "OutputArtifacts": [
+//                  {
+//                    "Name": "SourceOutput"
+//                  }
+//                ],
+//                "Configuration": {
+//                  "S3Bucket": { "Ref" : "SourceS3Bucket" },
+//                  "S3ObjectKey": { "Ref" : "SourceS3ObjectKey" }
+//                },
+//                "RunOrder": 1
+//              }
+//            ]
+//          },
+//          {
+//            "Name": "Beta",
+//            "Actions": [
+//              {
+//                "Name": "BetaAction",
+//                "InputArtifacts": [
+//                  {
+//                    "Name": "SourceOutput"
+//                  }
+//                ],
+//                "ActionTypeId": {
+//                  "Category": "Deploy",
+//                  "Owner": "AWS",
+//                  "Version": "1",
+//                  "Provider": "CodeDeploy"
+//                },
+//                "Configuration": {
+//                  "ApplicationName": {"Ref" : "ApplicationName"},
+//                  "DeploymentGroupName": {"Ref" : "DeploymentGroupName"}
+//                },
+//                "RunOrder": 1
+//              }
+//            ]
+//          },
+//          {
+//            "Name": "Production",
+//            "Actions": [
+//              {
+//                "Name": "ReleaseAction",
+//                "InputArtifacts": [
+//                  {
+//                    "Name": "SourceOutput"
+//                  }
+//                ],
+//                "ActionTypeId": {
+//                  "Category": "Deploy",
+//                  "Owner": "AWS",
+//                  "Version": "1",
+//                  "Provider": "CodeDeploy"
+//                },
+//                "Configuration": {
+//                  "ApplicationName": {"Ref" : "ApplicationName"},
+//                  "DeploymentGroupName": {"Ref" : "DeploymentGroupName"}
+//                },
+//                "RunOrder": 1
+//              }
+//            ]
+//          }
+//        ],
+//        "DisableInboundStageTransitions": [
+//          {
+//            "StageName": "Production",
+//            "Reason": "Disabling the transition until integration tests are completed"
+//          }
+//        ]
+//
+//      },
+//      "DependsOn" : ["ebDrupalEBApp"]
+//    }
+  }
+}

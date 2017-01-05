@@ -1,0 +1,244 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "A MySQL RDS instance which can be used by other stacks",
+  "Parameters" : {
+    "InstanceType" : {
+      "Type" : "String",
+      "Default" : "db.t2.micro",
+      "AllowedValues" : [ "db.t2.micro", "db.t2.small", "db.t2.medium", "db.t2.large" ],
+      "Description" : "Enter db.t2.micro, db.t2.small, db.t2.medium, db.t2.large. Default is db.t2.micro."
+    },
+    "AllocatedStorage" : {
+      "Type" : "Number",
+      "Description" : "Storage for the RDS instance in GB",
+      "Default" : 10,
+      "MinValue" : 5,
+      "MaxValue" : 6144
+    },
+    "AdminUsername" : {
+      "Type" : "String",
+      "Description" : "The database admin account username",
+      "Default" : "admin",
+      "MinLength" : "1",
+      "MaxLength" : "16",
+      "NoEcho" : "true",
+      "AllowedPattern" : "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
+    },
+    "AdminPassword" : {
+      "Type" : "String",
+      "Description" : "The database admin account password. Remember to save this.",
+      "NoEcho" : "true",
+      "MinLength" : "8",
+      "MaxLength" : "41",
+      "AllowedPattern" : "[a-zA-Z0-9]*",
+      "ConstraintDescription" : "must contain only alphanumeric characters."
+    },
+    "MySQLVersion" : {
+      "Type" : "String",
+      "Description" : "Storage for the RDS instance in GB. Use `aws rds describe-db-engine-versions --engine=mysql` to see newer versions",
+      "Default" : "5.6.27",
+      "AllowedValues" : [
+        "5.6.19a",
+        "5.6.19b",
+        "5.6.21",
+        "5.6.21b",
+        "5.6.22",
+        "5.6.23",
+        "5.6.27",
+        "5.6.29",
+        "5.6.34",
+        "5.7.10",
+        "5.7.11",
+        "5.7.16"
+      ]
+    },
+    "MySQLPort" : { "Type" : "number", "Default" : 3306 },
+    "VPCId" : {
+      "Type" : "AWS::EC2::VPC::Id",
+      "Default" : "vpc-c2c971a7",
+      "Description" : "The VPC to create the MySQL instance in."
+    }
+  },
+  "Resources" : {
+    "EC2InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "Tags": [{"Key":"Name","Value":{ "Fn::Join" : [ "-", [ "cf-ec2-rds", { "Ref" : "AWS::StackName" } ] ] }}],
+        "GroupDescription" : "Allows EC2 instances to connect to MySQL Instance",
+        "VpcId" : { "Ref" : "VPCId" }
+      }
+    },
+    "RDSInstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "Tags": [{"Key":"Name","Value":{ "Fn::Join" : [ "-", [ "cf-rds", { "Ref" : "AWS::StackName" } ] ] }}],
+        "GroupDescription" : "Allows EC2 instances to connect to MySQL Instance",
+        "VpcId" : { "Ref" : "VPCId" },
+        "SecurityGroupEgress" : [ {"IpProtocol":"-1","CidrIP":"0.0.0.0/0"} ]
+      }
+    },
+    "RDSInstanceSecurityGroupIngress":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId": { "Fn::GetAtt" : [ "RDSInstanceSecurityGroup", "GroupId" ] },
+        "IpProtocol": "tcp",
+        "FromPort": { "Ref": "MySQLPort" },
+        "ToPort": { "Ref": "MySQLPort" },
+        "SourceSecurityGroupId": { "Fn::GetAtt" : [ "EC2InstanceSecurityGroup", "GroupId" ] }
+      }
+    },
+    "EC2InstanceSecurityGroupEgress":{
+      "Type":"AWS::EC2::SecurityGroupEgress",
+      "Properties":{
+        "GroupId": { "Fn::GetAtt" : [ "EC2InstanceSecurityGroup", "GroupId" ] },
+        "IpProtocol": "tcp",
+        "FromPort": "0",
+        "ToPort": "65535",
+        "DestinationSecurityGroupId": { "Fn::GetAtt" : [ "RDSInstance", "GroupId" ] }
+      }
+    },
+    "RDSInstance" : {
+      "Type" : "AWS::RDS::DBInstance",
+      "Properties" : {
+        "AllocatedStorage" : { "Ref" : "AllocatedStorage" },
+        "DBInstanceClass" : { "Ref" : "InstanceType" },
+        "EngineVersion" : { "Ref" : "MySQLVersion" },
+        "AutoMinorVersionUpgrade" : true,
+        "MultiAZ" : true,
+        "Engine" : "MySQL",
+        "Port":{ "Ref": "MySQLPort" },
+        "MasterUsername" : { "Ref" : "AdminUsername" },
+        "MasterUserPassword" : { "Ref" : "AdminPassword" },
+        "DBSubnetGroupName" : "default",
+        "VPCSecurityGroups" : [ ]
+      },
+      "DependsOn":["RDSInstanceSecurityGroup"]
+    },
+    "LambdaRole" : {
+      "Type" : "AWS::IAM::Role",
+      "Properties" : {
+        "RoleName" : { "Fn::Join" : [ "-", [ "cf-lambda-role", { "Ref" : "AWS::StackName" } ] ] },
+        "AssumeRolePolicyDocument" : {
+          "Version" : "2012-10-17",
+          "Statement" : [
+            { "Effect" : "Allow", "Principal" : { "Service" : [ "lambda.amazonaws.com" ] }, "Action" : [ "sts:AssumeRole" ] }
+          ]
+        },
+        "Path" : "/",
+        "Policies" : [
+          {
+            "PolicyName" : {
+              "Fn::Join" : [ "-", [ "cf-lambda-policy", { "Ref" : "AWS::StackName" } ] ]
+            },
+            "PolicyDocument" : {
+              "Version" : "2012-10-17",
+              "Statement" : [
+                {
+                  "Sid" : "Stmt1483627090000",
+                  "Effect" : "Allow",
+                  "Action" : [
+                    "kms:Decrypt",
+                    "kms:DescribeKey",
+                    "kms:Encrypt",
+                    "kms:ListKeys"
+                  ],
+                  "Resource" : [
+                    "arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71"
+                  ]
+                },
+                {
+                  "Sid" : "Stmt1482521844000",
+                  "Effect" : "Allow",
+                  "Action" : [
+                    "ec2:CreateNetworkInterface",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces"
+                  ],
+                  "Resource" : [
+                    "*"
+                  ]
+                }, {
+                  "Effect" : "Allow",
+                  "Action" : [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource" : "arn:aws:logs:*:*:*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "LambdaFunctionEncryptCredentials" : {
+      "Type" : "AWS::Lambda::Function",
+      "Properties" : {
+        "Handler" : "index.handler",
+        "Role" : { "Fn::GetAtt" : [ "LambdaRole", "Arn" ] },
+        "Code" : {
+          "ZipFile" : {
+            "Fn::Join" : [
+              "\n", [
+                "import base64",
+                "import boto3",
+                "import cfnresponse",
+                "def handler(event, context):",
+                "    if event['RequestType'] == 'Delete':",
+                "        return cfnresponse.send(event,context,cfnresponse.SUCCESS,{})",
+                "    client = boto3.client('kms')",
+                "    encryptedUsername = client.encrypt(",
+                "        KeyId=event['ResourceProperties']['KMSKeyARN'],",
+                "        Plaintext=event['ResourceProperties']['Username']",
+                "    )",
+                "    encryptedPassword = client.encrypt(",
+                "        KeyId=event['ResourceProperties']['KMSKeyARN'],",
+                "        Plaintext=event['ResourceProperties']['Password']",
+                "    )",
+                "    return cfnresponse.send(event,context,cfnresponse.SUCCESS,{",
+                "        'encryptedUsername': base64.b64encode(encryptedUsername['CiphertextBlob']),",
+                "        'encryptedPassword': base64.b64encode(encryptedPassword['CiphertextBlob'])",
+                "    },{})"
+              ]
+            ]
+          }
+        },
+        "Runtime" : "python2.7",
+        "Timeout" : "60"
+      }
+    },
+    "EncryptedCredentials" : {
+      "Type" : "AWS::CloudFormation::CustomResource",
+      "Version" : "1.0",
+      "Properties" : {
+        "ServiceToken" : { "Fn::GetAtt" : [ "LambdaFunctionEncryptCredentials", "Arn" ] },
+        "KMSKeyARN" : "arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71",
+        "Username" : { "Ref" : "AdminUsername" },
+        "Password" : { "Ref" : "AdminPassword" }
+      }
+    }
+  },
+  "Outputs" : {
+    "Hostname" : {
+      "Value" : { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Address" ] },
+      "Description" : "Hostname of the RDS Instance"
+    },
+    "Port" : {
+      "Value" : { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Port" ] },
+      "Description" : "Port that MySQL listens on the RDS Instance"
+    },
+    "EncryptedAdminUsername" : {
+      "Value" : { "Fn::GetAtt" : [ "EncryptedCredentials", "encryptedUsername" ] },
+      "Description" : "KMS encrypted value of Admin Username (Base64 encoded)"
+    },
+    "EncryptedAdminPassword" : {
+      "Value" : { "Fn::GetAtt" : [ "EncryptedCredentials", "encryptedPassword" ] },
+      "Description" : "KMS encrypted value of Admin Password (Base64 encoded)"
+    },
+    "EC2InstanceSecurityGroup" : {
+      "Value" : { "Fn::GetAtt" : [ "EC2InstanceSecurityGroup", "GroupId" ] }
+    }
+  }
+}

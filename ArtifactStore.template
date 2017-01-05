@@ -1,0 +1,13 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "An S3 bucket and CloudFormation distribution that may be used by other stacks for static assets ",
+  "Resources": {
+    "S3Bucket" : {
+      "Type" : "AWS::S3::Bucket",
+      "Properties" : {
+        "AccessControl" : "Private"
+      },
+      "DeletionPolicy" : "Retain"
+    }
+  }
+}
