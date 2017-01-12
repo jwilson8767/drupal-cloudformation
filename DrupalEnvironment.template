@@ -1,13 +1,5 @@
 //TODO Invoke Lambda function to add branch/environment to codepipeline
-//TODO move security group definition into this file
-//TODO Move into VPC
-//TODO define EC2 instance role (should have read/write access on AssetStore, be able to use KMS key, and access dynamodb)
-
-//TODO Create method for creating mysql schema (which will include permissions to get an item out of dynamodb)
-//TODO Allow KeyPair to be passed in for dev environments
-
-//TODO Create method for cloning another environment
-
+//TODO Re-organize parameter groups/labels
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
   "Description" : "A Drupal Environment",
@@ -15,7 +7,7 @@
     "AWS::CloudFormation::Interface" : {
       "ParameterGroups" : [
         {
-          "Label" : { "default" : "General Configuration" },
+          "Label" : {"default" : "General Configuration"},
           "Parameters" : [
             "DrupalApplicationStack",
             "MySQLInstanceStack",
@@ -23,7 +15,7 @@
           ]
         },
         {
-          "Label" : { "default" : "Deployment Configuration" },
+          "Label" : {"default" : "Deployment Configuration"},
           "Parameters" : [
             "GitRepository",
             "GitBranch",
@@ -31,11 +23,10 @@
           ]
         },
         {
-          "Label" : { "default" : "Advanced Configuration" },
+          "Label" : {"default" : "Advanced Configuration"},
           "Parameters" : [
             "InstanceType",
-            "SolutionStackName",
-            "VPCId"
+            "SolutionStackName"
           ]
         }
       ],
@@ -47,8 +38,7 @@
         "GitBranch" : "Git Branch",
         "KeyPair" : "EC2 KeyPair",
         "InstanceType" : "Instance Type",
-        "SolutionStackName" : "Solution StackName",
-        "VPCId" : "VPC Id"
+        "SolutionStackName" : "Solution StackName"
       }
     }
   },
@@ -59,14 +49,6 @@
       "MinLength" : 1,
       "MaxLength" : 255,
       "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$"
-    },
-    "MySQLInstanceStack" : {
-      "Type" : "String",
-      "Description" : "The MySQL Instance stack name to use for this environment",
-      "MinLength" : 1,
-      "MaxLength" : 255,
-      "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
-      "Default" : "drupal-app-mysql56"
     },
     "AssetStoreStack" : {
       "Type" : "String",
@@ -91,21 +73,63 @@
     "InstanceType" : {
       "Type" : "String",
       "Default" : "t2.nano",
-      "AllowedValues" : [ "t2.nano", "t2.micro", "t2.small", "t2.medium" ],
+      "AllowedValues" : ["t2.nano", "t2.micro", "t2.small", "t2.medium"],
       "Description" : "Enter t2.nano, t2.micro, t2.small, or t2.medium. Default is t2.nano."
     },
     "SolutionStackName" : {
       "Type" : "String",
       "Default" : "64bit Amazon Linux 2016.09 v2.3.0 running PHP 7.0",
       "Description" : "The ElasticBeanstalk Solution Stack to use for this environment. Use `aws elasticbeanstalk list-available-solution-stacks | grep PHP` to see valid options"
-    }
-    "VPCId" : {
-      "Type" : "AWS::EC2::VPC::Id",
-      "Default" : "vpc-c2c971a7",
-      "Description" : "The VPC to create the environment instance in. (Must be the same VPC as selected MySQL Instance Stack)"
+    },
+    "MySQLInstanceStack" : {
+      "Type" : "String",
+      "Description" : "The MySQL Instance stack name to use for this environment",
+      "MinLength" : 1,
+      "MaxLength" : 255,
+      "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+      "Default" : "drupal-app-mysql56"
+    },
+    "DatabaseName" : {
+      "Type" : "String",
+      "Description" : "Leave blank to use this stack's name. If database with this name already exists it will be used instead of creating a new database."
+    },
+    "RetainDatabase" : {
+      "Type" : "Boolean",
+      "Default" : false,
+      "Description" : "Keep the database when this environment is deleted."
+    },
+    "CloneDatabaseSourceDatabaseName" : {
+      "Type" : "String",
+      "Description" : "Clone this environment's database from another MySQL database. (Must specify CloneDatabaseSourceMySQLInstance)",
+      "MaxLength" : 64
+    },
+    "CloneDatabaseSourceMySQLInstance" : {
+      "Type" : "String",
+      "Description" : "MySQL Instance Stack to clone Database from.",
+      "MaxLength" : 255,
+      "AllowedPattern" : "(^[a-zA-Z][-a-zA-Z0-9]*$|^$)"
     }
   },
   "Resources" : {
+    "MySQLDatabase" : {
+      "Type" : "AWS::CloudFormation::CustomResource",
+      "Version" : "1.0",
+      "Properties" : {
+        "ServiceToken" : "This lambda function's ARN",
+        "KMSKeyARN" : "",
+        "Hostname" : {"Fn::ImportValue" : [{"Fn::Sub" : "${MySQLInstanceStack}-Hostname"}]},
+        "Port" : {"Fn::ImportValue" : [{"Fn::Sub" : "${MySQLInstanceStack}-Port"}]},
+        "AdminUsername" : {"Fn::ImportValue" : [{"Fn::Sub" : "${MySQLInstanceStack}-AdminUsername"}]},
+        "AdminPassword" : {"Fn::ImportValue" : [{"Fn::Sub" : "${MySQLInstanceStack}-AdminPassword"}]},
+        "Database" : {"Fn::If" : [{"Ref" : "DatabaseName"}, {"Ref" : "DatabaseName"}, {"Ref" : "AWS::StackName"}]},
+        "RetainDatabase" : {"Ref" : "RetainDatabase"},
+        "CloneSourceDatabaseName" : {"Fn::ImportValue" : [{"Ref" : "CloneDatabaseSourceDatabaseName"}]},
+        "CloneSourceHostname" : {"Fn::ImportValue" : [{"Fn::Sub" : "${CloneDatabaseSourceMySQLInstance}-Hostname"}]},
+        "CloneSourcePort" : {"Fn::ImportValue" : [{"Fn::Sub" : "${CloneDatabaseSourceMySQLInstance}-Port"}]},
+        "CloneSourceAdminUsername" : {"Fn::ImportValue" : [{"Fn::Sub" : "${CloneDatabaseSourceMySQLInstance}-AdminUsername"}]},
+        "CloneSourceAdminPassword" : {"Fn::ImportValue" : [{"Fn::Sub" : "${CloneDatabaseSourceMySQLInstance}-AdminPassword"}]}
+      }
+    },
     "EC2Role" : {
       "Type" : "AWS::IAM::Role",
       "Properties" : {
@@ -115,18 +139,16 @@
             {
               "Effect" : "Allow",
               "Principal" : {
-                "Service" : [ "ec2.amazonaws.com" ]
+                "Service" : ["ec2.amazonaws.com"]
               },
-              "Action" : [ "sts:AssumeRole" ]
+              "Action" : ["sts:AssumeRole"]
             }
           ]
         },
         "Path" : "/",
         "Policies" : [
           {
-            "PolicyName" : {
-              "Fn::Join" : [ "-", [ "cf", { "Ref" : "DrupalApplicationStack" }, { "Ref" : "AWS::StackName" }, "ec2-role" ] ]
-            },
+            "PolicyName" : {"Fn::Sub" : "${DrupalApplicationStack}-${AWS::StackName}-ec2-role"},
             "PolicyDocument" : {
               "Version" : "2012-10-17",
               "Statement" : [
@@ -162,7 +184,7 @@
                   "Resource" : [
                     "arn:aws:logs:*:*:log-group:/aws/elasticbeanstalk*"
                   ]
-                }{
+                }, {
                   "Version" : "2012-10-17",
                   "Statement" : [
                     {
@@ -194,25 +216,25 @@
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Allows EC2 instances to connect serve content over ports 80 and 443",
-        "VpcId" : { "Ref" : "VPCId" },
+        "VpcId" : {"Fn::ImportValue" : [{"Fn::Sub" : "cf-vpc-${AWS::Region}-VpcId"}]},
         "SecurityGroupIngress" : [
-          { "ProtocolIp" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIP" : "0.0.0.0/0" },
-          { "ProtocolIp" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIP" : "0.0.0.0/0" }
+          {"ProtocolIp" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIP" : "0.0.0.0/0"},
+          {"ProtocolIp" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIP" : "0.0.0.0/0"}
         ],
-        "SecurityGroupEgress" : [  { "ProtocolIp" : "tcp", "FromPort" : "0", "ToPort" : "65535", "CidrIP" : "0.0.0.0/0" }]
+        "SecurityGroupEgress" : [{"ProtocolIp" : "tcp", "FromPort" : "0", "ToPort" : "65535", "CidrIP" : "0.0.0.0/0"}]
       }
     },
     "EC2InstanceProfile" : {
       "Type" : "AWS::IAM::InstanceProfile",
       "Properties" : {
         "Path" : "/",
-        "Roles" : [ { "Ref" : "EC2Role" } ]
+        "Roles" : [{"Ref" : "EC2Role"}]
       }
     },
     "DevelopmentConfigurationTemplate" : {
       "Type" : "AWS::ElasticBeanstalk::ConfigurationTemplate",
       "Properties" : {
-        "ApplicationName" : { "Ref" : "DrupalApplicationStack" },
+        "ApplicationName" : {"Ref" : "DrupalApplicationStack"},
         "Description" : "",
         "OptionSettings" : [
           {
@@ -231,16 +253,16 @@
             "Value" : "LoadBalanced"
           }
         ],
-        "SolutionStackName" : { "Ref" : "SolutionStackName" }
+        "SolutionStackName" : {"Ref" : "SolutionStackName"}
       }
     },
     "ElasticBeanstalkEnvironment" : {
       "Type" : "AWS::ElasticBeanstalk::Environment",
       "Properties" : {
-        "ApplicationName" : { "Ref" : "DrupalApplicationStack" },
-        "EnvironmentName" : { "Ref" : "AWS::StackName" },
-        "Description" : "AWS ElasticBeanstalk Sample Environment",
-        "TemplateName" : { "Ref" : "DevelopmentConfigurationTemplate" }
+        "ApplicationName" : {"Ref" : "DrupalApplicationStack"},
+        "EnvironmentName" : {"Ref" : "AWS::StackName"},
+        "Description" : {"Fn::Sub" : "An environment for ${DrupalApplicationStack}"},
+        "TemplateName" : {"Ref" : "DevelopmentConfigurationTemplate"}
       }
     }
   }

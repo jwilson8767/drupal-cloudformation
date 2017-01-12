@@ -5,31 +5,33 @@
     "AssetBucketPolicy" : {
       "Type" : "AWS::S3::BucketPolicy",
       "Properties" : {
-        "Bucket" : { "Ref" : "AWS::StackName" },
+        "Bucket" : {"Ref" : "AWS::StackName"},
         "PolicyDocument" : {
           "Statement" : [
             {
-              "Action" : [ "s3:GetObject" ],
+              "Action" : ["s3:GetObject"],
               "Effect" : "Allow",
-              "Resource" : { "Fn::Join" : [ "", [ "arn:aws:s3:::", { "Ref" : "AWS::StackName" }, "/*" ] ] },
+              "Resource" : {"Fn::Sub" : "arn:aws:s3:::${AWS::StackName}/*"},
               "Principal" : "*"
             }
           ]
         }
-      }
+      },
+      "DeletionPolicy" : "Retain"
     },
     "AssetBucket" : {
       "Type" : "AWS::S3::Bucket",
       "Properties" : {
-        "BucketName" : { "Ref" : "AWS::StackName" }
+        "BucketName" : {"Ref" : "AWS::StackName"}
       },
       "DeletionPolicy" : "Retain"
     }
   },
   "Outputs" : {
     "DomainName" : {
-      "Value" : { "Fn::GetAtt" : [ "AssetBucket", "DomainName" ] },
-      "Description" : "Url to the S3 Bucket"
+      "Value" : {"Fn::GetAtt" : ["AssetBucket", "DomainName"]},
+      "Description" : "Url to the S3 Bucket",
+      "Export" : {"Name" : {"Fn::Sub" : "${AWS::StackName}-DomainName"}}
     }
   }
 }

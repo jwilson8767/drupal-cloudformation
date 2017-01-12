@@ -1,0 +1,66 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Provisions network resources needed to provision other stacks in this Region. The stack must be named according to the format 'cf-vpc-${region}'",
+  "Resources" : {
+    "VPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties" : {
+        "CidrBlock" : "172.17.0.0/16",
+        "EnableDnsSupport" : "true",
+        "EnableDnsHostnames" : "false",
+        "Tags" : [{"Key" : "Name", "Value" : { "Ref": "AWS::StackName" }}]
+      }
+    },
+    "SubnetA" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "AvailabilityZone" : {"Fn::Sub" : "${AWS::Region}a"},
+        "CidrBlock" : "172.17.1.0/24",
+        "MapPublicIpOnLaunch" : false,
+        "VpcId" : {"Ref" : "VPC"}
+      },
+      "DependsOn" : "VPC"
+    },
+    "SubnetB" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "AvailabilityZone" : {"Fn::Sub" : "${AWS::Region}b"},
+        "CidrBlock" : "172.17.2.0/24",
+        "MapPublicIpOnLaunch" : false,
+        "VpcId" : {"Ref" : "VPC"}
+      },
+      "DependsOn" : "VPC"
+    },
+    "RDSSubnetGroup" : {
+      "Type" : "AWS::RDS::DBSubnetGroup",
+      "Properties" : {
+        "DBSubnetGroupDescription" : "default",
+        "SubnetIds" : [{"Ref" : "SubnetA"}, {"Ref" : "SubnetB"}],
+        "Tags" : []
+      },
+      "DependsOn" : ["SubnetA", "SubnetB"]
+    }
+  },
+  "Outputs" : {
+    "VpcId" : {
+      "Value" : {"Ref" : "VPC"},
+      "Description" : "VpcId",
+      "Export" : {"Name" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-VpcId"}}
+    },
+    "SubnetA" : {
+      "Value" : {"Ref" : "SubnetA"},
+      "Description" : "Subnet ID of Subnet A",
+      "Export" : {"Name" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-SubnetA"}}
+    },
+    "SubnetB" : {
+      "Value" : {"Ref" : "SubnetB"},
+      "Description" : "Subnet ID of Subnet B",
+      "Export" : {"Name" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-SubnetB"}}
+    },
+    "RDSSubnetGroup" : {
+      "Value" : {"Ref" : "RDSSubnetGroup"},
+      "Description" : "RDS Subnet Group Id",
+      "Export" : {"Name" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-RDSSubnetGroup"}}
+    }
+  }
+}
