@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-#Installs, then packages the virtualenv's packages and this project's source for use by AWS Lambda
+#Installs, then packages the virtualenv's packages and this project's source for use by AWS Lambda.
+
+# If this fails, you may have to manually install virtualenv and ensure the correct pip binary is being used.
 pip install virtualenv
 
 virtualenv ./
