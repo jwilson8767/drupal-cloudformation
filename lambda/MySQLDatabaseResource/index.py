@@ -112,11 +112,11 @@ def create(database):
     }
 
 
-def update(database, olddatabase):
+def update(database, old_database):
     """
     Database name has been changed, create it if it doesn't already exist, and grant privileges to it.
     :param database: string
-    :param olddatabase:  string
+    :param old_database:  string
     :return:
     """
     print('Updating schema and user')
@@ -126,7 +126,7 @@ def update(database, olddatabase):
                 UPDATE mysql.db SET Db = '{db}' WHERE Db='{olddb}';
                 """.format(**{
             'db': connection.escape_string(database),
-            'olddb': connection.escape_string(olddatabase)
+            'olddb': connection.escape_string(old_database)
         }), ())
     connection.commit()
 
