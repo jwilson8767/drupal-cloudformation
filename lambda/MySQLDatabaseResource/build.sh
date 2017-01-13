@@ -7,13 +7,12 @@ pip install virtualenv
 virtualenv ./
 
 source ./bin/activate
-
 pip install pymysql
 
 rm -rf MySQLDatabaseResource.zip
 
 pushd ./lib/python2.7/site-packages
-zip  -r9 $OLDPWD/MySQLDatabaseResource.zip . --exclude pip\* --exclude setuptools\* --exclude virtualenv\* --exclude easy_install*
+zip  -r9 $OLDPWD/MySQLDatabaseResource.zip . --exclude pip\* --exclude setuptools\* --exclude virtualenv\* --exclude easy_install\*
 popd
 
 zip -r9J ./MySQLDatabaseResource.zip ./*.py

@@ -7,8 +7,8 @@
       "Properties" : {
         "CidrBlock" : "172.17.0.0/16",
         "EnableDnsSupport" : "true",
-        "EnableDnsHostnames" : "false",
-        "Tags" : [{"Key" : "Name", "Value" : { "Ref": "AWS::StackName" }}]
+        "EnableDnsHostnames" : "true",
+        "Tags" : [{"Key" : "Name", "Value" : {"Ref" : "AWS::StackName"}}]
       }
     },
     "SubnetA" : {
@@ -39,6 +39,54 @@
         "Tags" : []
       },
       "DependsOn" : ["SubnetA", "SubnetB"]
+    },
+    "VPCInternetGateway" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {},
+      "DependsOn" : "VPC"
+    },
+    "VPCInternetGatewayAttachment" : {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Properties" : {
+        "InternetGatewayId" : {"Ref" : "VPCInternetGateway"},
+        "VpcId" : {"Ref" : "VPC"}
+      },
+      "DependsOn" : ["VPCInternetGateway", "VPC"]
+    },
+    "PublicRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : {"Ref" : "VPC"},
+        "Tags" : [
+          {"Key" : "Application", "Value" : {"Ref" : "AWS::StackId"}},
+          {"Key" : "Network", "Value" : "Public"}
+        ]
+      }
+    },
+    "PublicRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "DependsOn" : "VPCInternetGateway",
+      "Properties" : {
+        "RouteTableId" : {"Ref" : "PublicRouteTable"},
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : {"Ref" : "VPCInternetGateway"}
+      }
+    },
+    "PublicSubnetRouteTableAssociationSubnetA" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {"Ref" : "SubnetA"},
+        "RouteTableId" : {"Ref" : "PublicRouteTable"}
+      },
+      "DependsOn" : ["VPCInternetGateway", "SubnetA"]
+    },
+    "PublicSubnetRouteTableAssociationSubnetB" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {"Ref" : "SubnetB"},
+        "RouteTableId" : {"Ref" : "PublicRouteTable"}
+      },
+      "DependsOn" : ["VPCInternetGateway", "SubnetB"]
     }
   },
   "Outputs" : {

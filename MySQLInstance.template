@@ -59,7 +59,7 @@
     "EC2InstanceSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "Tags" : [{"Key" : "Name", "Value" : {"Fn::Sub" : "cf-rds-ec2${AWS::StackName}"}}],
+        "Tags" : [{"Key" : "Name", "Value" : {"Fn::Sub" : "cf-rds-ec2-${AWS::StackName}"}}],
         "GroupDescription" : "Allows EC2 instances to connect to MySQL Instance",
         "VpcId" : {"Fn::ImportValue" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-VpcId"}}
       }
@@ -73,15 +73,6 @@
         "SecurityGroupEgress" : [{"IpProtocol" : "-1", "CidrIp" : "0.0.0.0/0"}]
       }
     },
-    "LambdaSecurityGroup" : {
-      "Type" : "AWS::EC2::SecurityGroup",
-      "Properties" : {
-        "Tags" : [{"Key" : "Name", "Value" : {"Fn::Sub" : "cf-rds-lambda-${AWS::StackName}"}}],
-        "GroupDescription" : "Allows Lambda functions to connect to this MySQL Instance",
-        "VpcId" : {"Fn::ImportValue" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-VpcId"}},
-        "SecurityGroupEgress" : [{"IpProtocol" : "-1", "CidrIp" : "0.0.0.0/0"}]
-      }
-    },
     "RDSInstanceSecurityGroupIngress" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
@@ -89,7 +80,7 @@
         "IpProtocol" : "tcp",
         "FromPort" : {"Ref" : "MySQLPort"},
         "ToPort" : {"Ref" : "MySQLPort"},
-        "SourceSecurityGroupId" : {"Fn::GetAtt" : ["EC2InstanceSecurityGroup", "GroupId"]}
+        "CidrIp" : "0.0.0.0/0"
       }
     },
     "EC2InstanceSecurityGroupEgress" : {
@@ -115,7 +106,8 @@
         "MasterUsername" : {"Ref" : "AdminUsername"},
         "MasterUserPassword" : {"Ref" : "AdminPassword"},
         "DBSubnetGroupName" : {"Fn::ImportValue" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-RDSSubnetGroup"}},
-        "VPCSecurityGroups" : [{"Fn::GetAtt" : ["RDSInstanceSecurityGroup", "GroupId"]}]
+        "VPCSecurityGroups" : [{"Fn::GetAtt" : ["RDSInstanceSecurityGroup", "GroupId"]}],
+        "PubliclyAccessible" : true
       },
       "DeletionPolicy" : "Delete",
       "DependsOn" : ["RDSInstanceSecurityGroup"]
@@ -220,14 +212,7 @@
           "S3Key" : "MySQLDatabaseResource.zip"
         },
         "Runtime" : "python2.7",
-        "Timeout" : "60",
-        "VpcConfig" : {
-          "SecurityGroupIds" : [{"Fn::GetAtt" : ["EC2InstanceSecurityGroup", "GroupId"]}],
-          "SubnetIds" : [
-            {"Fn::ImportValue" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-SubnetA"}},
-            {"Fn::ImportValue" : {"Fn::Sub" : "cf-vpc-${AWS::Region}-SubnetB"}}
-          ]
-        }
+        "Timeout" : "60"
       }
     },
     "EncryptedCredentials" : {
