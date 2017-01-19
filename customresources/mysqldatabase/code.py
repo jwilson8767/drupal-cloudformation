@@ -1,42 +1,5 @@
 from __future__ import print_function
 
-"""
-This is a CloudFormation Lambda-backed Custom Resource for MySQL Databases living inside RDS MySQL instances.
-It handles common management tasks such as creating/cloning/removing schemas and creating/removing users.
-
-Usage for testing:
-  index.handler(json.loads('''
-    {
-        "ResourceProperties": {
-            "KMSKeyARN": "",
-            "Hostname": "",
-            "Port": "3306",
-            "Username": "",
-            "Password": "",
-            "Database": "",
-            "RetainDatabase": "yes|no",
-        },
-        "RequestType": "Create|Update|Delete"
-    }
-'''),None)
-
-Usage in a CloudFormation Template:
-  "MySQLDatabase" : {
-    "Type" : "AWS::CloudFormation::CustomResource",
-    "Version" : "1.0",
-    "Properties" : {
-       "ServiceToken" : "This lambda function's ARN",
-       "KMSKeyARN" : "",
-       "Hostname" : "mysql.example",
-       "Port" : "3306",
-       "Username" : "",
-       "password" : "",
-       "Database" : "some-StackName"
-       "RetainDatabase" : true
-    }
-  }
-"""
-
 import base64
 import boto3
 import cfnresponse
@@ -97,9 +60,9 @@ def create(database):
     with connection.cursor() as cursor:
         print('creating schema and user')
         cursor.execute("""
-            CREATE SCHEMA IF NOT EXISTS {db} CHARACTER SET utf8 COLLATE utf8_general_ci;
+            CREATE SCHEMA IF NOT EXISTS `{db}` CHARACTER SET utf8 COLLATE utf8_general_ci;
             CREATE USER '{user}'@'%%' IDENTIFIED BY '{pass}';
-            GRANT ALL PRIVILEGES ON {db}.* TO {user}@'%%';
+            GRANT ALL PRIVILEGES ON `{db}`.* TO '{user}'@'%%';
             """.format(**{
             'db': connection.escape_string(database),
             'user': connection.escape_string(username),
@@ -122,7 +85,7 @@ def update(database, old_database):
     print('Updating schema and user')
     with connection.cursor() as cursor:
         cursor.execute("""
-                CREATE SCHEMA IF NOT EXISTS {db} CHARACTER SET utf8 COLLATE utf8_general_ci;
+                CREATE SCHEMA IF NOT EXISTS `{db}` CHARACTER SET utf8 COLLATE utf8_general_ci;
                 UPDATE mysql.db SET Db = '{db}' WHERE Db='{olddb}';
                 """.format(**{
             'db': connection.escape_string(database),

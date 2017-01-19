@@ -1,0 +1,1 @@
+This custom resource creates, updates, and deletes codepipeline actions in such a way that a single codepipeline can be reused for multiple environments and branches within the same application. I expect this functionality will eventually exist natively in CloudFormation, but it doesn't just yet.

@@ -1,0 +1,12 @@
+{
+"ResourceProperties": {
+"KMSKeyARN": "",
+"Hostname": "localhost",
+"Port": "3306",
+"Username": "",
+"Password": "",
+"Database": "",
+"RetainDatabase": "no"
+},
+"RequestType": "Create"
+}

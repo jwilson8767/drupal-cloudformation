@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: A Drupal Environment
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label: {default: General Configuration}
+      Parameters: [DrupalApplicationStack, MySQLInstanceStack, AssetStoreStack]
+    - Label: {default: Deployment Configuration}
+      Parameters: [GitRepository, GitBranch, KeyPair]
+    - Label: {default: Advanced Configuration}
+      Parameters: [InstanceType, SolutionStackName]
+Parameters:
+  AssetStoreStack: {AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$', Default: drupal-assets,
+    Description: 'Asset Store Stack to use for this environment.', MaxLength: 255, MinLength: 1,
+    Type: String}
+#TODO Write database cloning/merging functionality.
+#  CloneDatabaseSourceDatabaseName:
+#    Description: "Clone this environment's database from another MySQL database. (Must specify CloneDatabaseSourceMySQLInstance)"
+#    MaxLength: 64
+#    Type: String
+#  CloneDatabaseSourceMySQLInstance: {AllowedPattern: '(^[a-zA-Z][-a-zA-Z0-9]*$|^$)',
+#    Description: MySQL Instance Stack to clone Database from., MaxLength: 255, Type: String}
+  DatabaseName: {Description: Leave blank to use this stack's name. If a database
+      with this name already exists it will be used instead of creating a new database.,
+    Type: String}
+  DrupalApplicationStack:
+    AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$'
+    Description: 'The Drupal Application stack name to use for this environment'
+    MaxLength: 255
+    MinLength: 1
+    Type: String
+  GitBranch: {Description: The Git branch this environment should pull from.,
+    Type: String}
+  GitRepository: {Description: The Github Repository to pull from. For example 'nemac/cohesivefire.nemac.org',
+    Type: String}
+  GitOAuthToken:  {Description: The Github Repository to pull from. For example 'nemac/cohesivefire.nemac.org',
+    Type: String, NoEcho: true}
+  InstanceType:
+    AllowedValues: [t2.nano, t2.micro, t2.small, t2.medium]
+    Default: t2.nano
+    Description: Enter t2.nano, t2.micro, t2.small, or t2.medium. Default is t2.nano.
+    Type: String
+#  KeyPair:
+#    Description: 'The KeyPair to be used for SSH access to machines. Leave blank for greater security.'
+#    Type: 'AWS::EC2::KeyPair::KeyName'
+#    Default: ''
+  MySQLInstanceStack: {AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$', Default: drupal-mysql56,
+    Description: The MySQL Instance stack name to use for this environment, MaxLength: 255,
+    MinLength: 1, Type: String}
+  RetainDatabase: {Default: no, Description: Keep the database when this environment
+      is deleted., AllowedValues:[yes, no], Type: String}
+  SolutionStackName: {Default: 64bit Amazon Linux 2016.09 v2.3.0 running PHP 7.0,
+    Description: The ElasticBeanstalk Solution Stack to use for this environment.
+      Use `aws elasticbeanstalk list-available-solution-stacks | grep PHP` to see
+      valid options, Type: String}
+Resources:
+  DevelopmentConfigurationTemplate:
+    Properties:
+      ApplicationName: !Ref 'DrupalApplicationStack'
+      Description: ''
+      OptionSettings:
+      - {Namespace: 'aws:autoscaling:asg', OptionName: MinSize, Value: '1'}
+      - {Namespace: 'aws:autoscaling:asg', OptionName: MaxSize, Value: '1'}
+      - {Namespace: 'aws:elasticbeanstalk:environment', OptionName: EnvironmentType,
+        Value: LoadBalanced}
+      SolutionStackName: !Ref 'SolutionStackName'
+    Type: AWS::ElasticBeanstalk::ConfigurationTemplate
+  EC2InstanceProfile:
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+    Type: AWS::IAM::InstanceProfile
+  EC2InstanceSecurityGroup:
+    Properties:
+      GroupDescription: Allows EC2 instances to connect serve content over ports 80
+        and 443
+      SecurityGroupEgress:
+      - {CidrIp: 0.0.0.0/0, FromPort: '0', IpProtocol: tcp, ToPort: '65535'}
+      SecurityGroupIngress:
+      - {CidrIp: 0.0.0.0/0, FromPort: '80', IpProtocol: tcp, ToPort: '80'}
+      - {CidrIp: 0.0.0.0/0, FromPort: '443', IpProtocol: tcp, ToPort: '443'}
+      VpcId: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-VpcId'}
+    Type: AWS::EC2::SecurityGroup
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action: ['s3:Get*', 's3:List*', 's3:PutObject']
+            Effect: Allow
+            Resource: ['arn:aws:s3:::elasticbeanstalk-*', 'arn:aws:s3:::elasticbeanstalk-*/*']
+            Sid: BucketAccess
+          - Action: ['xray:PutTraceSegments', 'xray:PutTelemetryRecords']
+            Effect: Allow
+            Resource: '*'
+            Sid: XRayAccess
+          - Action: ['logs:PutLogEvents', 'logs:CreateLogStream']
+            Effect: Allow
+            Resource: ['arn:aws:logs:*:*:log-group:/aws/elasticbeanstalk*']
+            Sid: CloudWatchLogsAccess
+          - Action: ['ecs:Poll', 'ecs:StartTask', 'ecs:StopTask', 'ecs:DiscoverPollEndpoint',
+              'ecs:StartTelemetrySession', 'ecs:RegisterContainerInstance', 'ecs:DeregisterContainerInstance',
+              'ecs:DescribeContainerInstances', 'ecs:Submit*', 'ecs:DescribeTasks']
+            Effect: Allow
+            Resource: '*'
+            Sid: ECSAccess
+          Version: '2012-10-17'
+        PolicyName: !Sub '${DrupalApplicationStack}-${AWS::StackName}-ec2-role'
+  ElasticBeanstalkEnvironment:
+    Type: 'AWS::ElasticBeanstalk::Environment'
+    Version: '1.0'
+    Properties:
+      ApplicationName: !Ref 'DrupalApplicationStack'
+      Description: !Sub 'An environment for ${DrupalApplicationStack}'
+      EnvironmentName: !Ref 'AWS::StackName'
+      TemplateName: !Ref 'DevelopmentConfigurationTemplate'
+
+  MySQLDatabase:
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+    Properties:
+      ServiceToken: { 'Fn::ImportValue': !Sub '${MySQLInstanceStack}-MySQLDatabaseResource'}
+      Database: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
+      Hostname: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-Hostname'}
+      KMSKeyARN: 'arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71'
+      Port: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-Port'}
+      RetainDatabase: !Ref 'RetainDatabase'
+      Username: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-AdminUsername'}
+      Password: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-AdminPassword'}
+Conditions:
+  HasDatabaseName: !Not [!Equals [!Ref 'DatabaseName', '']]
+#TODO Output EB domain
+#TODO KeyPair?
+#TODO Output environent variables
