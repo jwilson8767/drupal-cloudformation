@@ -12,8 +12,8 @@ Do this if you have a new Drupal project that you want to design/develop.
     - Use `git clone <URL for Drupal template repo>` followed by `
     - Create a GitHub repository for your project.
     - `git remote add <Repository URL>` followed by `git push origin master`
-3. Click here to create a new Drupal Application stack: <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/DrupalApplication.yaml"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack"/></a>
-4. Click here to create a new Drupal Environment stack:  <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/DrupalEnvironment.yaml"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack" _/></a>
+3. Click here to create a new Drupal Application stack: <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-application.yaml"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack"/></a>
+4. Click here to create a new Drupal Environment stack:  <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-environment.yaml"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack" _/></a>
 5. Login to your drupal environment using the default login.
 
 ## <a name="clone-production"></a>Cloning the production environment to ~~avoid breaking stuff~~ develop in a safe environment.

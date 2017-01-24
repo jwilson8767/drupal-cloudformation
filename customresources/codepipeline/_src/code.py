@@ -18,7 +18,7 @@ def handler(event, context):
         update(**args)
     elif event['RequestType'] == 'Delete':
         delete(**args)
-    return cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, None)
+    return cfnresponse.send(event, context, cfnresponse.SUCCESS)
 
 
 def create(pipeline, token, owner, repo, branch, application, environment):

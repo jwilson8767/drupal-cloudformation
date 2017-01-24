@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: A MySQL RDS instance which can be used by other stacks
+Parameters:
+  AdminPassword: {AllowedPattern: '[a-zA-Z0-9]*', ConstraintDescription: must contain
+      only alphanumeric characters., Description: The database admin account password.
+      Remember to save this., MaxLength: '41', MinLength: '8', NoEcho: 'true', Type: String}
+  AdminUsername: {AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*', ConstraintDescription: must
+      begin with a letter and contain only alphanumeric characters., Default: admin,
+    Description: The database admin account username, MaxLength: '16', MinLength: '1',
+    NoEcho: 'true', Type: String}
+  AllocatedStorage: {Default: 10, Description: Storage for the RDS instance in GB,
+    MaxValue: 6144, MinValue: 5, Type: Number}
+  InstanceType:
+    AllowedValues: [db.t2.micro, db.t2.small, db.t2.medium, db.t2.large]
+    Default: db.t2.micro
+    Description: 'Choose an RDS instance size. Default: db.t2.micro.'
+    Type: String
+  MySQLPort: {Default: 3306, Type: Number}
+  MySQLVersion:
+    AllowedValues: [5.6.19a, 5.6.19b, 5.6.21, 5.6.21b, 5.6.22, 5.6.23, 5.6.27, 5.6.29,
+      5.6.34, 5.7.10, 5.7.11, 5.7.16]
+    Default: 5.6.34
+    Description: 'Storage for the RDS instance in GB. Use `aws rds describe-db-engine-versions
+      --engine=mysql --region=REGION` to see versions'
+    Type: String
+
+Resources:
+  EC2InstanceSecurityGroup:
+    Properties:
+      GroupDescription: 'Allows EC2 instances to connect to MySQL Instance'
+      Tags:
+      - Key: Name
+        Value: !Sub 'cf-rds-ec2-${AWS::StackName}'
+      VpcId: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-VpcId'}
+    Type: AWS::EC2::SecurityGroup
+  EC2InstanceSecurityGroupEgress:
+    Properties:
+      DestinationSecurityGroupId:
+        !GetAtt "RDSInstanceSecurityGroup.GroupId"
+      FromPort: '0'
+      GroupId:
+        !GetAtt "EC2InstanceSecurityGroup.GroupId"
+      IpProtocol: 'tcp'
+      ToPort: '65535'
+    Type: 'AWS::EC2::SecurityGroupEgress'
+  EncryptedAdminPassword:
+    Properties:
+      KMSKeyARN: !ImportValue 'KMSKeyArn'
+      Plaintext: !Ref 'AdminPassword'
+      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cf-encryptedvalue'
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+  RDSInstance:
+    DeletionPolicy: Delete
+    DependsOn: [RDSInstanceSecurityGroup]
+    Properties:
+      AllocatedStorage: !Ref 'AllocatedStorage'
+      AutoMinorVersionUpgrade: true
+      DBInstanceClass: !Ref 'InstanceType'
+      DBSubnetGroupName: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-RDSSubnetGroup'}
+      Engine: MySQL
+      EngineVersion: !Ref 'MySQLVersion'
+      MasterUserPassword: !Ref 'AdminPassword'
+      MasterUsername: !Ref 'AdminUsername'
+      MultiAZ: true
+      Port: !Ref 'MySQLPort'
+      PubliclyAccessible: true
+      VPCSecurityGroups:
+      - !GetAtt "RDSInstanceSecurityGroup.GroupId"
+    Type: AWS::RDS::DBInstance
+  RDSInstanceSecurityGroup:
+    Properties:
+      GroupDescription: Allows EC2 instances to connect to MySQL Instance
+      SecurityGroupEgress:
+      - {CidrIp: 0.0.0.0/0, IpProtocol: '-1'}
+      Tags:
+      - Key: Name
+        Value: !Sub 'cf-rds-${AWS::StackName}'
+      VpcId: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-VpcId'}
+    Type: AWS::EC2::SecurityGroup
+  RDSInstanceSecurityGroupIngress:
+    Properties:
+      CidrIp: 0.0.0.0/0
+      FromPort: !Ref 'MySQLPort'
+      GroupId: !GetAtt "RDSInstanceSecurityGroup.GroupId"
+      IpProtocol: tcp
+      ToPort: !Ref 'MySQLPort'
+    Type: 'AWS::EC2::SecurityGroupIngress'
+Outputs:
+  AdminPassword:
+    Description: KMS encrypted value of Admin Password (Base64 encoded)
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminPassword'
+    Value:
+      !GetAtt "EncryptedAdminPassword.encryptedValue"
+  AdminUsername:
+    Description: KMS encrypted value of Admin Username (Base64 encoded)
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminUsername'
+    Value: !Ref 'AdminUsername'
+  EC2InstanceSecurityGroup:
+    Description: The SecurityGroupID for EC2Instances that should be allowed to contact
+      this MySQL Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-EC2InstanceSecurityGroup'
+    Value:
+      !GetAtt "EC2InstanceSecurityGroup.GroupId"
+  Hostname:
+    Description: Hostname of the RDS Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-Hostname'
+    Value:
+      !GetAtt "RDSInstance.Endpoint.Address"
+  Port:
+    Description: Port that MySQL listens on the RDS Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-Port'
+    Value:
+      !GetAtt "RDSInstance.Endpoint.Port"

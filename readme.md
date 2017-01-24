@@ -12,18 +12,16 @@ Term|Definition
 
 ## Stack Types
 
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-artifacts&templateURL=https://s3.amazonaws.com/nemac-cloudformation/CloudFormationVPC.yaml">CloudFormation VPC</a>
-A VPC specifically for resources created by CloudFormation. Prevents interaction between CF stacks and pre-existing resources.
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-artifacts&templateURL=https://s3.amazonaws.com/nemac-cloudformation/ArtifactStore.yaml">Artifact Store</a>
-A private S3 bucket which can be used by other stacks for CodePipeline and Elastic Beanstalk artifact storage.
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-assets&templateURL=https://s3.amazonaws.com/nemac-cloudformation/AssetStore.yaml">Asset Store</a>
-A public S3 bucket which can serve static assets for other stacks.
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-mysql56&templateURL=https://s3.amazonaws.com/nemac-cloudformation/MySQLInstance.yaml">MySQL Instance</a>
-A MySQL RDS instance which can be used by other stacks.
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/DrupalApplication.yaml">Drupal Application</a>
-A ElasticBeanstalk-based Drupal application which can have many environments.
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/DrupalEnvironment.yaml">Drupal Environment</a>
-A ElasticBeanstalk-based environment which supports automated deployment of Drupal projects.
+### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=cf-identities&templateURL=https://s3.amazonaws.com/nemac-cloudformation/cf-identities.yaml">CloudFormation Identities</a>
+Sets up basic IAM Roles and Groups and a KMS key for this AWS Account. The very first stack to be created on any AWS Account. Don't mess with this unless you know what you're doing.
+### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-region&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-region.yaml">Drupal Region</a>
+Provides buckets and network resources for this region's CloudFormation Drupal Stacks. Depends on `cf-identities`.
+### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-mysql56&templateURL=https://s3.amazonaws.com/nemac-cloudformation/mysql-instance.yaml">MySQL Instance</a>
+A MySQL RDS instance which can be used by other stacks. Depends on `drupal-region`.
+### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-application.yaml">Drupal Application</a>
+A ElasticBeanstalk-based Drupal application which can have many environments. Depends on `drupal-region`.
+### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-environment.yaml">Drupal Environment</a>
+A ElasticBeanstalk-based environment which supports automated deployment of Drupal projects. Depends on `drupal-region`, `drupal-application`, and `mysql-instance`
 ## Creating a new application
 Before an CloudFormation application is created the project should already have a non-empty git repository. Additionally a MySQL Instance stack should be created
 

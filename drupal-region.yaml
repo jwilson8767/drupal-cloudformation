@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Provisions IAM roles and network resources needed to provision other stacks in this Region.'
+Resources:
+  ArtifactBucket:
+    Properties:
+      AccessControl: 'Private'
+      BucketName: !Sub 'nemac-drupal-artifacts-${AWS::Region}'
+    Type: 'AWS::S3::Bucket'
+  AssetBucket:
+    DeletionPolicy: 'Retain'
+    Properties:
+      BucketName: !Sub 'nemac-drupal-assets-${AWS::Region}'
+    Type: 'AWS::S3::Bucket'
+  AssetBucketPolicy:
+    DeletionPolicy: 'Retain'
+    DependsOn: 'AssetBucket'
+    Properties:
+      Bucket: !Sub 'nemac-drupal-assets-${AWS::Region}'
+      PolicyDocument:
+        Statement:
+        - Action: ['s3:GetObject']
+          Effect: 'Allow'
+          Principal: '*'
+          Resource: !Sub 'arn:aws:s3:::nemac-drupal-assets-${AWS::Region}/*'
+    Type: 'AWS::S3::BucketPolicy'
+  PublicRoute:
+    DependsOn: ['VPCInternetGatewayAttachment','PublicRouteTable']
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'VPCInternetGateway'
+      RouteTableId: !Ref 'PublicRouteTable'
+    Type: 'AWS::EC2::Route'
+  PublicRouteTable:
+    DependsOn: 'VPC'
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+      - Key: 'Application'
+        Value: !Ref 'AWS::StackId'
+      - Key: Network
+        Value: Public
+    Type: 'AWS::EC2::RouteTable'
+  PublicSubnetRouteTableAssociationSubnetA:
+    DependsOn: [VPCInternetGateway, SubnetA]
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'SubnetA'
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+  PublicSubnetRouteTableAssociationSubnetB:
+    DependsOn: [VPCInternetGateway, SubnetB]
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'SubnetB'
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+  RDSSubnetGroup:
+    DependsOn: ['SubnetA', 'SubnetB']
+    Properties:
+      DBSubnetGroupDescription: 'default'
+      SubnetIds:
+      - !Ref 'SubnetA'
+      - !Ref 'SubnetB'
+      Tags: []
+    Type: 'AWS::RDS::DBSubnetGroup'
+  SubnetA:
+    DependsOn: 'VPC'
+    Properties:
+      AvailabilityZone: !Sub '${AWS::Region}a'
+      CidrBlock: '172.17.1.0/24'
+      MapPublicIpOnLaunch: 'false'
+      VpcId: !Ref 'VPC'
+    Type: 'AWS::EC2::Subnet'
+  SubnetB:
+    DependsOn: 'VPC'
+    Properties:
+      AvailabilityZone: !Sub '${AWS::Region}b'
+      CidrBlock: '172.17.2.0/24'
+      MapPublicIpOnLaunch: 'false'
+      VpcId: !Ref 'VPC'
+    Type: 'AWS::EC2::Subnet'
+  VPC:
+    Properties:
+      CidrBlock: '172.17.0.0/16'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
+      Tags:
+      - Key: 'Name'
+        Value: !Ref 'AWS::StackName'
+    Type: 'AWS::EC2::VPC'
+  VPCInternetGateway:
+    DependsOn: 'VPC'
+    Properties: {}
+    Type: 'AWS::EC2::InternetGateway'
+  VPCInternetGatewayAttachment:
+    DependsOn: ['VPCInternetGateway', 'VPC']
+    Properties:
+      InternetGatewayId: !Ref 'VPCInternetGateway'
+      VpcId: !Ref 'VPC'
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+Outputs:
+  RDSSubnetGroup:
+    Description: 'RDS Subnet Group Id'
+    Export:
+      Name: !Sub 'cf-vpc-${AWS::Region}-RDSSubnetGroup'
+    Value: !Ref 'RDSSubnetGroup'
+  SubnetA:
+    Description: 'Subnet ID of Subnet A'
+    Export:
+      Name: !Sub 'cf-vpc-${AWS::Region}-SubnetA'
+    Value: !Ref 'SubnetA'
+  SubnetB:
+    Description: 'Subnet ID of Subnet B'
+    Export:
+      Name: !Sub 'cf-vpc-${AWS::Region}-SubnetB'
+    Value: !Ref 'SubnetB'
+  VpcId:
+    Description: 'VpcId'
+    Export:
+      Name: !Sub 'cf-vpc-${AWS::Region}-VpcId'
+    Value: !Ref 'VPC'
+  ArtifactStore:
+    Description: 'S3 Bucket name'
+    Export:
+      Name: !Sub '${AWS::StackName}-ArtifactStore'
+    Value: !Sub 'nemac-drupal-artifacts-${AWS::Region}'
+  ArtifactStoreUrl:
+    Description: 'Url to the Artifact store S3 Bucket'
+    Export:
+      Name: !Sub '${AWS::StackName}-ArtifactStoreUrl'
+    Value: !GetAtt "ArtifactBucket.DomainName"
+  AssetStore:
+    Description: 'S3 Bucket name'
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetStore'
+    Value: !Sub 'nemac-drupal-assets-${AWS::Region}'
+  AssetStoreUrl:
+    Description: 'Url to the Asset Store S3 Bucket'
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetStoreUrl'
+    Value: !GetAtt "AssetBucket.DomainName"

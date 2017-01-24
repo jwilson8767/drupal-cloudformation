@@ -1,0 +1,24 @@
+---
+name: cf-mysqldatabase
+source: _build
+environments:
+  dev:
+    region: us-east-1
+    profile: nemac
+    policy:
+      statements:
+      - Action: ['ec2:CreateNetworkInterface', 'ec2:DeleteNetworkInterface', 'ec2:DescribeNetworkInterfaces']
+        Effect: Allow
+        Resource: ['*']
+      - Action: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents']
+        Effect: Allow
+        Resource: 'arn:aws:logs:*:*:*'
+      - Action: ['kms:Encrypt', 'kms:Decrypt']
+        Effect: Allow
+        Resource: 'arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71'
+lambda:
+  description: Provides management of MySQL databases in CloudFormation.
+  handler: code.handler
+  runtime: python2.7
+  memory_size: 128
+  timeout: 30

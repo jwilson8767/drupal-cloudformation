@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
-# Use this to get a new AWS account or region ready for nemac-cloudformation templates.
-# It will create service roles for CloudFormation, a private bucket for
-# templates to live in, and will create a VPC stack for use by other stacks later.
+# Use this to get a new AWS account ready for nemac-cloudformation templates.
+# It will create service roles for CloudFormation and a private bucket for
+# templates to live in.
 
-# Note: you will need to have the AWS CLI installed and configured with an access key to use this script.
-# Use `aws configure` to update the default region to the region you would like to provision.
+# Requirements:
+# - AWS CLI installed and configured with an access key to use this script.
+# - python 2.7
+# - Kappa (pip install kappa)
 
-aws iam create-role --role-name cf-service-role --cli-input-json file://cf-service-role.json
-aws iam create-role --role-name cf-codepipeline-role --cli-input-json file://cf-codepipeline-role.json
-aws iam create-role --role-name cf-elasticbeanstalk-role --cli-input-json file://cf-elasticbeanstalk-role.json
-
+echo "creating template bucket if it doesn't exist..."
 aws s3 mb s3://nemac-cloudformation/
 
-#TODO write other first-run steps
+echo "deploying custom resources"
+pushd ./customresources/
+./deploy.sh
+popd
+
+echo 'validating and uploading templates...'
+./deploy.sh
+
+echo 'creating CloudFormation Identities stack...'
+aws cloudformation create-stack --stack-name cf-identities --template-url https://s3.amazonaws.com/nemac-cloudformation/cf-identities.yaml --capabilities CAPABILITY_NAMED_IAM

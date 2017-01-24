@@ -36,10 +36,10 @@ def handler(event, context):
         else:
             print('invalid RequestType: ' + event['RequestType'])
         if context is not None:
-            return cfnresponse.send(event, context, cfnresponse.SUCCESS, response, None)
+            return cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data=response)
     except:
         if context is not None:
-            cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+            cfnresponse.send(event, context, cfnresponse.FAILED)
         raise
     finally:
         print('closing connection')

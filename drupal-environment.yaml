@@ -13,13 +13,6 @@ Parameters:
   AssetStoreStack: {AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$', Default: drupal-assets,
     Description: 'Asset Store Stack to use for this environment.', MaxLength: 255, MinLength: 1,
     Type: String}
-#TODO Write database cloning/merging functionality.
-#  CloneDatabaseSourceDatabaseName:
-#    Description: "Clone this environment's database from another MySQL database. (Must specify CloneDatabaseSourceMySQLInstance)"
-#    MaxLength: 64
-#    Type: String
-#  CloneDatabaseSourceMySQLInstance: {AllowedPattern: '(^[a-zA-Z][-a-zA-Z0-9]*$|^$)',
-#    Description: MySQL Instance Stack to clone Database from., MaxLength: 255, Type: String}
   DatabaseName: {Description: Leave blank to use this stack's name. If a database
       with this name already exists it will be used instead of creating a new database.,
     Type: String}
@@ -97,7 +90,7 @@ Resources:
           Statement:
           - Action: ['s3:Get*', 's3:List*', 's3:PutObject']
             Effect: Allow
-            Resource: ['arn:aws:s3:::elasticbeanstalk-*', 'arn:aws:s3:::elasticbeanstalk-*/*']
+            Resource: [!Sub 'arn:aws:s3:::cf-drupal-${AWS::Region}', 'arn:aws:s3:::cf-drupal-${AWS::Region}/*']
             Sid: BucketAccess
           - Action: ['xray:PutTraceSegments', 'xray:PutTelemetryRecords']
             Effect: Allow
@@ -113,6 +106,10 @@ Resources:
             Effect: Allow
             Resource: '*'
             Sid: ECSAccess
+          - Action: ['kms:Encrypt', 'kms:Decrypt']
+            Effect: Allow
+            Resource: !ImportValue 'cf-identities-KMSKeyArn'
+            Sid: Use of KMS Key
           Version: '2012-10-17'
         PolicyName: !Sub '${DrupalApplicationStack}-${AWS::StackName}-ec2-role'
   ElasticBeanstalkEnvironment:
@@ -123,15 +120,14 @@ Resources:
       Description: !Sub 'An environment for ${DrupalApplicationStack}'
       EnvironmentName: !Ref 'AWS::StackName'
       TemplateName: !Ref 'DevelopmentConfigurationTemplate'
-
   MySQLDatabase:
     Type: AWS::CloudFormation::CustomResource
     Version: '1.0'
     Properties:
-      ServiceToken: { 'Fn::ImportValue': !Sub '${MySQLInstanceStack}-MySQLDatabaseResource'}
+      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cf-mysqldatabase'
       Database: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
       Hostname: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-Hostname'}
-      KMSKeyARN: 'arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71'
+      KMSKeyARN: !ImportValue 'KMSKeyArn'
       Port: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-Port'}
       RetainDatabase: !Ref 'RetainDatabase'
       Username: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-AdminUsername'}

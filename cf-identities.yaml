@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates CloudFormation IAM roles and groups for this AWS Account. There should only be one of this type of stack per account. StackName: cf-identities'
+Parameters:
+  KMSKeyArn:
+    Type: String
+    Default: 'arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71'
+    Description: 'KMS Key to be used for passing credentials to ec2 instances.'
+Resources:
+  CloudFormationRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'cloud-formation-role'
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: 'Allow'
+          Principal:
+            Service: 'cloudformation.amazonaws.com'
+        Version: '2012-10-17'
+      Path: '/'
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - s3:*
+            - codepipeline:*
+            - elasticbeanstalk:*
+            - ec2:*
+            - elasticloadbalancing:*
+            - autoscaling:*
+            - cloudwatch:*
+            - sns:*
+            - cloudformation:*
+            - rds:*
+            - sqs:*
+            - ecs:*
+            - lambda:*
+            - rds:*
+            - iam:*
+            - route53:*
+            Resource: "*"
+            Effect: Allow
+          Version: '2012-10-17'
+        PolicyName: cloudformation-role-policy
+  AdminGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: 'cf-admins'
+      Path: "/"
+      Policies:
+      - PolicyName: 'cf-admins-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: "Allow"
+            Action:
+            - s3:CreateBucket
+            - s3:GetBucketLocation
+            - s3:ListAllMyBuckets
+            Resource: "arn:aws:s3:::*"
+          - Effect: Allow
+            Action:
+            - s3:*
+            Resource: ['arn:aws:s3:::nemac-cloudformation', 'arn:aws:s3:::nemac-cloudformation/*']
+          - Effect: Allow
+            Action:
+            - s3:*
+            Resource: ['arn:aws:s3:::nemac-lambda*', 'arn:aws:s3:::nemac-lambda*/*']
+          - Effect: Allow
+            Action:
+            - s3:*
+            Resource: ['arn:aws:s3:::nemac-drupal-*', 'arn:aws:s3:::nemac-drupal-*/*']
+          - Effect: Allow
+            Action:
+            - cloudformation:*
+            - lambda:*
+            - codepipeline:*
+            - elasticbeanstalk:*
+            - cloudwatch:*
+            - logs:*
+            Resource: ['*']
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource: !GetAtt CloudFormationRole.Arn
+  DeveloperGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: 'cf-developers'
+      Path: "/"
+      Policies:
+      - PolicyName: 'cf-developers-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:GetObjectVersion
+            - s3:ListBucket
+            Resource: ['arn:aws:s3:::nemac-cloudformation', 'arn:aws:s3:::nemac-cloudformation/*']
+          - Effect: Allow
+            Action:
+            - cloudformation:list*
+            - cloudformation:describe*
+            - cloudformation:get*
+            - cloudformation:ValidateTemplates
+            Resource: ['*']
+          - Effect: Allow
+            Action:
+            - cloudformation:*
+            Condition:
+              StringEquals:
+                'cloudformation:TemplateURL': 'https://s3.amazonaws.com/nemac-cloudformation/drupal-environment.yaml'
+            Resource: ['*']
+          - Effect: Allow
+            Action:
+            - cloudformation:*
+            Condition:
+              StringEquals:
+                'cloudformation:TemplateURL': 'https://s3.amazonaws.com/nemac-cloudformation/drupal-application.yaml'
+            Resource: ['*']
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource: !GetAtt CloudFormationRole.Arn
+  ElasticBeanstalkRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: 'Allow'
+          Principal:
+            Service: 'elasticbeanstalk.amazonaws.com'
+        Version: '2012-10-17'
+      Path: '/'
+      ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService']
+      RoleName: 'elastic-beanstalk-role'
+    Type: 'AWS::IAM::Role'
+  LambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action: ['ec2:CreateNetworkInterface', 'ec2:DeleteNetworkInterface', 'ec2:DescribeNetworkInterfaces']
+            Effect: Allow
+            Resource: ['*']
+          - Action: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents']
+            Effect: Allow
+            Resource: arn:aws:logs:*:*:*
+          - Action: ['kms:Encrypt', 'kms:Decrypt']
+            Effect: Allow
+            Resource: !Ref 'KMSKeyArn'
+          Version: '2012-10-17'
+        PolicyName: 'lambda-role-policy'
+      RoleName: 'lambda-role'
+    Type: AWS::IAM::Role
+  CodePipelineRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: 'Allow'
+          Principal:
+            Service: 'codepipeline.amazonaws.com'
+        Version: '2012-10-17'
+      Path: '/'
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - s3:GetObject
+            - s3:GetObjectVersion
+            - s3:GetBucketVersioning
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - s3:PutObject
+            Resource: 'arn:aws:s3:::nemac-artifacts-*'
+            Effect: Allow
+          - Action:
+            - elasticbeanstalk:*
+            - ec2:*
+            - cloudwatch:*
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - lambda:InvokeFunction
+            - lambda:ListFunctions
+            Resource: "*"
+            Effect: Allow
+          Version: '2012-10-17'
+        PolicyName: 'codepipeline-role-policy'
+      RoleName: 'codepipeline-role'
+    Type: 'AWS::IAM::Role'
+Outputs:
+  CloudFormationRole:
+    Description: CloudFormation Service Role
+    Export:
+      Name: 'CloudFormationRoleArn'
+    Value: !GetAtt CloudFormationRole.Arn
+  KMSKeyArn:
+    Description: KMS Key to be used by CloudFormation to securely pass credentials.
+    Export:
+      Name: 'KMSKeyArn'
+    Value: !Ref KMSKeyArn
+  ElasticBeanstalkRole:
+    Description: ElasticBeanstalk Service Role
+    Export:
+      Name: 'ElasticBeanstalkRoleArn'
+    Value: !GetAtt ElasticBeanstalkRole.Arn
+  LambdaRole:
+    Description: Lambda Role
+    Export:
+      Name: 'LambdaRoleArn'
+    Value: !GetAtt LambdaRole.Arn
+  CodePipelineRole:
+    Description: 'CodePipeline role ARN'
+    Export:
+      Name: !Sub 'CodePipelineRoleArn'
+    Value: !GetAtt CodePipelineRole.Arn

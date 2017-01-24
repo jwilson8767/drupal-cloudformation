@@ -1,0 +1,21 @@
+---
+name: cf-codepipeline
+source: _build
+environments:
+  dev:
+    region: us-east-1
+    profile: nemac
+    policy:
+      statements:
+      - Action: ['ec2:CreateNetworkInterface', 'ec2:DeleteNetworkInterface', 'ec2:DescribeNetworkInterfaces']
+        Effect: Allow
+        Resource: ['*']
+      - Action: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents']
+        Effect: Allow
+        Resource: arn:aws:logs:*:*:*
+lambda:
+  description: Provides creation/deletion of CodePipeline actions to support multi-environment codepipelines in CloudFormation.
+  handler: code.handler
+  runtime: python2.7
+  memory_size: 128
+  timeout: 30
