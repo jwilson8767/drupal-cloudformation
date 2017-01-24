@@ -31,7 +31,7 @@ Resources:
       Tags:
       - Key: Name
         Value: !Sub 'cf-rds-ec2-${AWS::StackName}'
-      VpcId: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-VpcId'}
+      VpcId: !ImportValue 'cf-region-VpcId'
     Type: AWS::EC2::SecurityGroup
   EC2InstanceSecurityGroupEgress:
     Properties:
@@ -57,7 +57,7 @@ Resources:
       AllocatedStorage: !Ref 'AllocatedStorage'
       AutoMinorVersionUpgrade: true
       DBInstanceClass: !Ref 'InstanceType'
-      DBSubnetGroupName: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-RDSSubnetGroup'}
+      DBSubnetGroupName: {'Fn::ImportValue': !Sub 'cf-region-RDSSubnetGroup'}
       Engine: MySQL
       EngineVersion: !Ref 'MySQLVersion'
       MasterUserPassword: !Ref 'AdminPassword'
@@ -65,9 +65,8 @@ Resources:
       MultiAZ: true
       Port: !Ref 'MySQLPort'
       PubliclyAccessible: true
-      VPCSecurityGroups:
-      - !GetAtt "RDSInstanceSecurityGroup.GroupId"
-    Type: AWS::RDS::DBInstance
+      VPCSecurityGroups: !GetAtt 'RDSInstanceSecurityGroup.GroupId'
+    Type: 'AWS::RDS::DBInstance'
   RDSInstanceSecurityGroup:
     Properties:
       GroupDescription: Allows EC2 instances to connect to MySQL Instance
@@ -76,7 +75,7 @@ Resources:
       Tags:
       - Key: Name
         Value: !Sub 'cf-rds-${AWS::StackName}'
-      VpcId: {'Fn::ImportValue': !Sub 'cf-vpc-${AWS::Region}-VpcId'}
+      VpcId: !ImportValue 'cf-region-VpcId'
     Type: AWS::EC2::SecurityGroup
   RDSInstanceSecurityGroupIngress:
     Properties:

@@ -1,56 +1,49 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Conditions:
-  HasProductionEnvironment: !Equals [!Ref 'ProductionEnvironmentStack', '']
 Description: 'An Elastic Beanstalk Application stack which uses CodePipeline for automated deployments.'
-Outputs:
-  ProductionEnvironmentStack:
-    Description: 'The current production environment stack name'
-    Value: !Ref 'ProductionEnvironmentStack'
 Parameters:
-  ArtifactStoreStack:
-    AllowedPattern: '(^[a-zA-Z][-a-zA-Z0-9]*$)'
-    Default: drupal-artifacts
-    Description: 'Artifact Store Stack to use for this applications CodePipeline and ElasticBeanstalk artifacts.'
-    MaxLength: 255
-    Type: String
   ProductionEnvironmentStack:
     AllowedPattern: '(^[a-zA-Z][-a-zA-Z0-9]*$|^$)'
     Description: 'Drupal Environment stack name to use in production. Changing this will change the active production environment (including updating DNS Records). Leave blank on initial creation.'
     MaxLength: 255
     Type: String
+Conditions:
+  HasProductionEnvironment: !Equals [!Ref 'ProductionEnvironmentStack', '']
 Resources:
-#  CodePipeline:
-#    Properties:
-#      ArtifactStore:
-#        Location: !Sub 'nemac-${ArtifactStoreStack}'
-#        Type: S3
-#      Name: !Ref 'AWS::StackName'
-#      RoleArn:
-#        !ImportValue "!Sub '${ArtifactStoreStack}-CodePipelineRole'"
-#      Stages:
-#      - Actions:
-#        - ActionTypeId: {Category: Source, Owner: AWS, Provider: S3, Version: '1'}
-#          Configuration: {S3Bucket: dummybucket, S3ObjectKey: dummyobject.zip}
-#          InputArtifacts: []
-#          Name: DummySource
-#          OutputArtifacts:
-#          - {Name: dummyartifact}
-#          RunOrder: 1
-#        Name: Source
-#      - Actions:
-#        - ActionTypeId: {Category: Deploy, Owner: AWS, Provider: CloudFormation, Version: '1'}
-#          Configuration: {ActionMode: CREATE_UPDATE, RoleArn: 'arn:aws:iam::104538610210:role/nemac-cloudformation-role',
-#            StackName: drupal-artifacts, TemplateConfiguration: 'MyApp::asdf.json',
-#            TemplatePath: 'MyApp::a.json'}
-#          InputArtifacts:
-#          - {Name: dummyartifact}
-#          Name: dummydeployment
-#          OutputArtifacts: []
-#          RunOrder: 1
-#        Name: Development
-#    Type: AWS::CodePipeline::Pipeline
+  CodePipeline:
+    Properties:
+      ArtifactStore:
+        Location: !ImportValue 'cf-region-ArtifactStore'
+        Type: S3
+      Name: !Ref 'AWS::StackName'
+      RoleArn: !ImportValue 'CodePipelineRoleArn'
+      Stages:
+      - Actions:
+        - ActionTypeId: {Category: Source, Owner: AWS, Provider: S3, Version: '1'}
+          Configuration: {S3Bucket: dummybucket, S3ObjectKey: dummyobject.zip}
+          InputArtifacts: []
+          Name: DummySource
+          OutputArtifacts:
+          - {Name: dummyartifact}
+          RunOrder: 1
+        Name: Source
+      - Actions:
+        - ActionTypeId: {Category: Deploy, Owner: AWS, Provider: CloudFormation, Version: '1'}
+          Configuration: {ActionMode: CREATE_UPDATE, RoleArn: 'arn:aws:iam::{AWS::AccountId}:role/cloudformation-role',
+            StackName: dummyapp, TemplateConfiguration: 'MyApp::asdf.json',
+            TemplatePath: 'MyApp::a.json'}
+          InputArtifacts:
+          - {Name: dummyartifact}
+          Name: dummydeployment
+          OutputArtifacts: []
+          RunOrder: 1
+        Name: Development
+    Type: AWS::CodePipeline::Pipeline
   ElasticBeanstalkApp:
     Properties:
       ApplicationName: !Ref 'AWS::StackName'
       Description: !Sub '${AWS::StackName} Elastic Beanstalk Application'
     Type: AWS::ElasticBeanstalk::Application
+Outputs:
+  ProductionEnvironmentStack:
+    Description: 'The current production environment stack name'
+    Value: !Ref 'ProductionEnvironmentStack'

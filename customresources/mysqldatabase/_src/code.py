@@ -7,6 +7,7 @@ import pymysql
 import pymysql.cursors
 import random
 import string
+import logging
 
 kmsKeyARN = None
 kmsClient = boto3.client('kms')
@@ -15,15 +16,15 @@ connection = None
 
 def handler(event, context):
     global connection, kmsKeyARN
-    kmsKeyARN = event['ResourceProperties']['KMSKeyARN']
-    print('connecting to mysql instance..')
-    connection = pymysql.connect(host=event['ResourceProperties']['Hostname'],
-                                 port=int(event['ResourceProperties']['Port']),
-                                 user=decrypt(event['ResourceProperties']['Username']),
-                                 password=decrypt(event['ResourceProperties']['Password']),
-                                 cursorclass=pymysql.cursors.DictCursor)
-    print('connected.')
     try:
+        kmsKeyARN = event['ResourceProperties']['KMSKeyARN']
+        print('connecting to mysql instance..')
+        connection = pymysql.connect(host=event['ResourceProperties']['Hostname'],
+                                     port=int(event['ResourceProperties']['Port']),
+                                     user=event['ResourceProperties']['Username'],
+                                     password=decrypt(event['ResourceProperties']['Password']),
+                                     cursorclass=pymysql.cursors.DictCursor)
+        print('connected.')
         response = {}
         if event['RequestType'] == 'Create':
             response = create(event['ResourceProperties']['Database'])
@@ -38,9 +39,9 @@ def handler(event, context):
         if context is not None:
             return cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data=response)
     except:
+        logging.exception("Unhandled Exception")
         if context is not None:
             cfnresponse.send(event, context, cfnresponse.FAILED)
-        raise
     finally:
         print('closing connection')
         connection.close()
@@ -50,7 +51,7 @@ def create(database):
     """
     Create a new schema, a new user, and grant all to user on schema.
     :param database: string
-    :return: {'encryptedUsername', 'encryptedPassword'}
+    :return: {'username', 'encryptedPassword'}
     """
     username = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(12))
     password = ''.join(
@@ -70,7 +71,7 @@ def create(database):
         }), ())
     connection.commit()
     return {
-        'encryptedUsername': encrypt(username),
+        'username': username,
         'encryptedPassword': encrypt(password)
     }
 

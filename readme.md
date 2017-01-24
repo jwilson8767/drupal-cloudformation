@@ -14,14 +14,14 @@ Term|Definition
 
 ### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=cf-identities&templateURL=https://s3.amazonaws.com/nemac-cloudformation/cf-identities.yaml">CloudFormation Identities</a>
 Sets up basic IAM Roles and Groups and a KMS key for this AWS Account. The very first stack to be created on any AWS Account. Don't mess with this unless you know what you're doing.
-### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-region&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-region.yaml">Drupal Region</a>
+### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=cf-region&templateURL=https://s3.amazonaws.com/nemac-cloudformation/cf-region.yaml">Drupal Region</a>
 Provides buckets and network resources for this region's CloudFormation Drupal Stacks. Depends on `cf-identities`.
 ### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=drupal-mysql56&templateURL=https://s3.amazonaws.com/nemac-cloudformation/mysql-instance.yaml">MySQL Instance</a>
-A MySQL RDS instance which can be used by other stacks. Depends on `drupal-region`.
+A MySQL RDS instance which can be used by other stacks. Depends on `cf-region`.
 ### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-application.yaml">Drupal Application</a>
-A ElasticBeanstalk-based Drupal application which can have many environments. Depends on `drupal-region`.
+A ElasticBeanstalk-based Drupal application which can have many environments. Depends on `cf-region`.
 ### <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/drupal-environment.yaml">Drupal Environment</a>
-A ElasticBeanstalk-based environment which supports automated deployment of Drupal projects. Depends on `drupal-region`, `drupal-application`, and `mysql-instance`
+A ElasticBeanstalk-based environment which supports automated deployment of Drupal projects. Depends on `cf-region`, `drupal-application`, and `mysql-instance`
 ## Creating a new application
 Before an CloudFormation application is created the project should already have a non-empty git repository. Additionally a MySQL Instance stack should be created
 
@@ -32,8 +32,6 @@ Before an CloudFormation application is created the project should already have 
 <!-- TODO Write troubleshooting -->
 ## CloudFormation Gotcha's
 * !ImportValue works fine if given a string, but for substitutions (!Sub) you must use the long format. Ex: {'Fn::ImportValue': !Sub 'example-${AWS::StackName}'} to
-* Sometimes a failed creation or deletion will hang (especially if a resource is deleted outside of CloudFormation), but using `aws cloudformation delete-stack --stack-name NAME --retain-resources` will usually delete it immediately. If that doesn't work, wait ~15min and the stack will go into "_FAILED" mode and should be able to be deleted.
+* Sometimes a failed creation or deletion will hang (especially if a resource is deleted outside of CloudFormation), but using `aws cloudformation delete-stack --stack-name NAME --retain-resources` will usually delete it immediately. If that doesn't work, wait 10 minutes and the stack will go to a "FAILED" status and should be able to be deleted using the command above.
 
-## Contributing
-CloudFormation is a very powerful tool, but ultimately it still needs someone who understands the underlying resources to use it effectively.
 <!-- TODO Write a meaningful contributing guide -->

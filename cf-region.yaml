@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Provisions IAM roles and network resources needed to provision other stacks in this Region.'
 Resources:
   ArtifactBucket:
+    DeletionPolicy: 'Delete'
     Properties:
       AccessControl: 'Private'
       BucketName: !Sub 'nemac-drupal-artifacts-${AWS::Region}'
@@ -97,26 +98,26 @@ Resources:
       VpcId: !Ref 'VPC'
     Type: 'AWS::EC2::VPCGatewayAttachment'
 Outputs:
+  VpcId:
+    Description: 'VpcId'
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+    Value: !Ref 'VPC'
   RDSSubnetGroup:
     Description: 'RDS Subnet Group Id'
     Export:
-      Name: !Sub 'cf-vpc-${AWS::Region}-RDSSubnetGroup'
+      Name: !Sub '${AWS::StackName}-RDSSubnetGroup'
     Value: !Ref 'RDSSubnetGroup'
   SubnetA:
     Description: 'Subnet ID of Subnet A'
     Export:
-      Name: !Sub 'cf-vpc-${AWS::Region}-SubnetA'
+      Name: !Sub '${AWS::StackName}-SubnetA'
     Value: !Ref 'SubnetA'
   SubnetB:
     Description: 'Subnet ID of Subnet B'
     Export:
-      Name: !Sub 'cf-vpc-${AWS::Region}-SubnetB'
+      Name: !Sub '${AWS::StackName}-SubnetB'
     Value: !Ref 'SubnetB'
-  VpcId:
-    Description: 'VpcId'
-    Export:
-      Name: !Sub 'cf-vpc-${AWS::Region}-VpcId'
-    Value: !Ref 'VPC'
   ArtifactStore:
     Description: 'S3 Bucket name'
     Export:

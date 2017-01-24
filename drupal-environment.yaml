@@ -10,9 +10,6 @@ Metadata:
     - Label: {default: Advanced Configuration}
       Parameters: [InstanceType, SolutionStackName]
 Parameters:
-  AssetStoreStack: {AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$', Default: drupal-assets,
-    Description: 'Asset Store Stack to use for this environment.', MaxLength: 255, MinLength: 1,
-    Type: String}
   DatabaseName: {Description: Leave blank to use this stack's name. If a database
       with this name already exists it will be used instead of creating a new database.,
     Type: String}
@@ -33,10 +30,6 @@ Parameters:
     Default: t2.nano
     Description: Enter t2.nano, t2.micro, t2.small, or t2.medium. Default is t2.nano.
     Type: String
-#  KeyPair:
-#    Description: 'The KeyPair to be used for SSH access to machines. Leave blank for greater security.'
-#    Type: 'AWS::EC2::KeyPair::KeyName'
-#    Default: ''
   MySQLInstanceStack: {AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$', Default: drupal-mysql56,
     Description: The MySQL Instance stack name to use for this environment, MaxLength: 255,
     MinLength: 1, Type: String}
@@ -46,23 +39,137 @@ Parameters:
     Description: The ElasticBeanstalk Solution Stack to use for this environment.
       Use `aws elasticbeanstalk list-available-solution-stacks | grep PHP` to see
       valid options, Type: String}
+Conditions:
+  HasDatabaseName: !Not [!Equals [!Ref 'DatabaseName', '']]
 Resources:
   DevelopmentConfigurationTemplate:
     Properties:
       ApplicationName: !Ref 'DrupalApplicationStack'
       Description: ''
       OptionSettings:
-      - {Namespace: 'aws:autoscaling:asg', OptionName: MinSize, Value: '1'}
-      - {Namespace: 'aws:autoscaling:asg', OptionName: MaxSize, Value: '1'}
-      - {Namespace: 'aws:elasticbeanstalk:environment', OptionName: EnvironmentType,
-        Value: LoadBalanced}
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: EnvironmentType
+        Value: SingleInstance
+      - Namespace: aws:autoscaling:launchconfiguration
+        OptionName: IamInstanceProfile
+        Value: !GetAtt EC2InstanceProfile.Arn
+      - Namespace: aws:autoscaling:launchconfiguration
+        OptionName: InstanceType
+        Value: !Ref 'InstanceType'
+      - Namespace: aws:cloudformation:template:parameter
+        OptionName: InstancePort
+        Value: '80'
+      - Namespace: aws:ec2:vpc
+        OptionName: Subnets
+        ResourceName: AWSEBAutoScalingGroup
+        Value:
+          "Fn::Join": [",", ["Fn::ImportValue": !Sub 'cf-vpc-${AWS::Region}-SubnetA',"Fn::ImportValue": !Sub 'cf-vpc-${AWS::Region}-SubnetB']]
+      - Namespace: aws:ec2:vpc
+        OptionName: VPCId
+        ResourceName: AWSEBSecurityGroup
+        Value: {"Fn::ImportValue": !Sub '${MySQLInstance}-EC2InstanceSecurityGroup'}
+      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+        OptionName: DeleteOnTerminate
+        Value: 'true'
+      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+        OptionName: RetentionInDays
+        Value: '7'
+      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+        OptionName: StreamLogs
+        Value: 'false'
+      - Namespace: aws:elasticbeanstalk:command
+        OptionName: BatchSize
+        Value: '100'
+      - Namespace: aws:elasticbeanstalk:command
+        OptionName: BatchSizeType
+        Value: Percentage
+      - Namespace: aws:elasticbeanstalk:command
+        OptionName: IgnoreHealthCheck
+        Value: 'false'
+      - Namespace: aws:elasticbeanstalk:command
+        OptionName: Timeout
+        Value: '600'
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: allow_url_fopen
+        Value: 'On'
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: composer_options
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: display_errors
+        Value: 'Off'
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: document_root
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: max_execution_time
+        Value: '60'
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: memory_limit
+        Value: 256M
+      - Namespace: aws:elasticbeanstalk:container:php:phpini
+        OptionName: zlib.output_compression
+        Value: 'Off'
+      - Namespace: aws:elasticbeanstalk:control
+        OptionName: DefaultSSHPort
+        Value: '22'
+      - Namespace: aws:elasticbeanstalk:control
+        OptionName: LaunchTimeout
+        Value: '0'
+      - Namespace: aws:elasticbeanstalk:control
+        OptionName: LaunchType
+        Value: Migration
+      - Namespace: aws:elasticbeanstalk:control
+        OptionName: RollbackLaunchOnFailure
+        Value: 'false'
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: ExternalExtensionsS3Bucket
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: ExternalExtensionsS3Key
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: ServiceRole
+        Value: elasticbeanstalk-role
+      - Namespace: aws:elasticbeanstalk:healthreporting:system
+        OptionName: SystemType
+        Value: enhanced
+      - Namespace: aws:elasticbeanstalk:healthreporting:system
+        OptionName: HealthCheckSuccessThreshold
+        Value: Ok
+      - Namespace: aws:elasticbeanstalk:managedactions
+        OptionName: ManagedActionsEnabled
+        Value: 'false'
+      - Namespace: aws:elasticbeanstalk:managedactions
+        OptionName: PreferredStartTime
+      - Namespace: aws:elasticbeanstalk:managedactions:platformupdate
+        OptionName: InstanceRefreshEnabled
+        Value: 'false'
+      - Namespace: aws:elasticbeanstalk:managedactions:platformupdate
+        OptionName: UpdateLevel
+      - Namespace: aws:elasticbeanstalk:monitoring
+        OptionName: Automatically Terminate Unhealthy Instances
+        Value: 'true'
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'DRUPAL_DB_HOSTNAME'
+        Value: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-Hostname'}
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'DRUPAL_DB_PORT'
+        Value: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-PORT'}
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'DRUPAL_DB_USERNAME'
+        Value: !GetAtt MySQLDatabase.Username
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'DRUPAL_DB_PASSWORD'
+        Value: !GetAtt MySQLDatabase.encryptedPassword
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'DRUPAL_DB_NAME'
+        Value: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
       SolutionStackName: !Ref 'SolutionStackName'
     Type: AWS::ElasticBeanstalk::ConfigurationTemplate
+    DependsOn: ['EC2InstanceProfile', 'EC2InstanceSecurityGroup']
   EC2InstanceProfile:
     Properties:
       Path: /
       Roles: [!Ref 'EC2Role']
     Type: AWS::IAM::InstanceProfile
+    DependsOn: 'EC2Role'
   EC2InstanceSecurityGroup:
     Properties:
       GroupDescription: Allows EC2 instances to connect serve content over ports 80
@@ -108,7 +215,7 @@ Resources:
             Sid: ECSAccess
           - Action: ['kms:Encrypt', 'kms:Decrypt']
             Effect: Allow
-            Resource: !ImportValue 'cf-identities-KMSKeyArn'
+            Resource: !ImportValue 'KMSKeyArn'
             Sid: Use of KMS Key
           Version: '2012-10-17'
         PolicyName: !Sub '${DrupalApplicationStack}-${AWS::StackName}-ec2-role'
@@ -120,6 +227,7 @@ Resources:
       Description: !Sub 'An environment for ${DrupalApplicationStack}'
       EnvironmentName: !Ref 'AWS::StackName'
       TemplateName: !Ref 'DevelopmentConfigurationTemplate'
+    DependsOn: 'DevelopmentConfigurationTemplate'
   MySQLDatabase:
     Type: AWS::CloudFormation::CustomResource
     Version: '1.0'
@@ -132,8 +240,12 @@ Resources:
       RetainDatabase: !Ref 'RetainDatabase'
       Username: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-AdminUsername'}
       Password: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-AdminPassword'}
-Conditions:
-  HasDatabaseName: !Not [!Equals [!Ref 'DatabaseName', '']]
+Outputs:
+  DatabaseUser:
+    Description: 'Mysql Database user'
+    Value: !GetAtt "MySQLDatabase.username"
+  DomainName:
+    Description: 'EB Domain Name'
+    Value: !GetAtt "ElasticBeanstalkEnvironment.EndpointURL"
 #TODO Output EB domain
-#TODO KeyPair?
 #TODO Output environent variables
