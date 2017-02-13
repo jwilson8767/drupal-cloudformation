@@ -1,0 +1,11 @@
+{
+  "StackId": "arn:aws:cloudformation:us-east-1:EXAMPLE/stack-name/guid",
+  "ResourceProperties": {
+    "KMSKeyARN": "<KMS KEY ARN>",
+    "Plaintext": "<SOME PASSWORD>"
+  },
+  "RequestType": "Create",
+  "ResourceType": "custom::TestResource",
+  "RequestId": "test",
+  "LogicalResourceId": "MyTestResource"
+}

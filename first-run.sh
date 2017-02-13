@@ -13,11 +13,12 @@ aws s3 mb s3://nemac-cloudformation/
 
 echo "deploying custom resources"
 pushd ./customresources/
-./deploy.sh
+templates/deploy.sh
 popd
 
 echo 'validating and uploading templates...'
-./deploy.sh
-
+pushd ./templates
+templates/deploy.sh
+popd
 echo 'creating CloudFormation Identities stack...'
-aws cloudformation create-stack --stack-name cf-identities --template-url https://s3.amazonaws.com/nemac-cloudformation/cf-identities.yaml --capabilities CAPABILITY_NAMED_IAM
+cfn stack deploy deployments/cf-identities.yaml

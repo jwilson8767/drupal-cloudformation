@@ -4,6 +4,7 @@ Parameters:
   ProductionEnvironmentStack:
     AllowedPattern: '(^[a-zA-Z][-a-zA-Z0-9]*$|^$)'
     Description: 'Drupal Environment stack name to use in production. Changing this will change the active production environment (including updating DNS Records). Leave blank on initial creation.'
+    MinLength: 0
     MaxLength: 255
     Type: String
 Conditions:
@@ -21,7 +22,7 @@ Resources:
         - ActionTypeId: {Category: Source, Owner: AWS, Provider: S3, Version: '1'}
           Configuration: {S3Bucket: dummybucket, S3ObjectKey: dummyobject.zip}
           InputArtifacts: []
-          Name: DummySource
+          Name: dummy
           OutputArtifacts:
           - {Name: dummyartifact}
           RunOrder: 1
@@ -33,11 +34,12 @@ Resources:
             TemplatePath: 'MyApp::a.json'}
           InputArtifacts:
           - {Name: dummyartifact}
-          Name: dummydeployment
+          Name: dummy
           OutputArtifacts: []
           RunOrder: 1
         Name: Development
     Type: AWS::CodePipeline::Pipeline
+    DependsOn: ElasticBeanstalkApp
   ElasticBeanstalkApp:
     Properties:
       ApplicationName: !Ref 'AWS::StackName'

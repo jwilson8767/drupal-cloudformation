@@ -1,0 +1,9 @@
+Stack:
+  Region: us-east-1
+  StackName: testapp
+  TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml'
+  Capabilities:
+  - CAPABILITY_NAMED_IAM
+  Parameters:
+    ProductionEnvironmentStack: ''
+

@@ -1,16 +1,32 @@
-CloudFormation allows for extensibility via [custom resources](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-custom-resources.html). We use [Lambda-backed resources](https://aws.amazon.com/about-aws/whats-new/2015/04/aws-cloudformation-supports-aws-lambda-backed-custom-resources/) to define custom resource types which can be used and re-used in CloudFormation templates.
+Custom Resources
+----------------
+CloudFormation allows for extensibility via [custom resources](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-custom-resources.html). We use [Lambda-backed resources](https://aws.amazon.com/about-aws/whats-new/2015/04/aws-cloudformation-supports-aws-lambda-backed-custom-resources/) to define custom resource types which can be used and re-used in CloudFormation templates. For example, we create and manage mysql databases on pre-existing RDS Instances using Lambda functions.
 
-## Development
-To get started, just [install Gordon](https://gordon.readthedocs.io/en/latest/installation.html) (`pip install gordon`) and have at! Use `gordon build` to build, `cat tests/$lambda.json | gordon run $lambda.lambda` to test gordon locally, and `gordon apply` to deploy these custom resource types.
+Source code for each function can be found in `customresources/<function>/_src/code.py`
+Logs are output to [CloudWatch](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logs:)
 
-### Gordon
-[Gordon](https://github.com/jorgebastida/gordon) provides dependency management (with the help of pip-formatted `requirements.txt` files), automated building (`gordon build`), basic testing, and automated deployment (using CloudFormation!) for our custom resources.
+## Requirements
 
-### cfnresponse
-This python module provides an easy way to send responses to CloudFormation `Create`, `Update`, and `Delete` events.
+- Python 2.7+ (Python 3 is not yet supported by AWS Lambda)
+- [AWS CLI](https://github.com/aws/aws-cli) - `pip install awscli` followed by `aws configure` to enter your default region (usually `us-east-1`) and your AWS access key
+- [Kappa](https://github.com/garnaat/kappa) - `pip install kappa` (automated Lambda function deployment)
 
-### Building
+## Deploying changes
+1. Update any `kappa.yml` files to match your desired AWS CLI profile (use `aws configure --profile <profile>` to add a new profile if needed, KMS Key ARN (default is fine if used on NEMAC's AWS account), and function names (to avoid replacing the current prodcution lambda function).
+2. Deploy your changes by either entering a specific lambda function's directory and using `./build.sh && kappa deploy` or deploying all lambda functions using `./customresources/deploy.sh`. **Your changes will immediately go into production, rename the function in `kappa.yml` for development/testing**
 
-### Testing
+## Gotcha's
+- Lambda functions inside a VPC only access AWS services which have an endpoint in that VPC. Currently S3 is the only AWS service to have an endpoint in every VPC by default. For this reason I recommend only creating Lambda functions outside VPCs. If they need to interact with resources inside a VPC, use security groups to allow them to do so.
+- `kappa.yml` contains developer-specific values by design and requires customization before using Kappa.
 
-### Deployment
+## Further reading
+AWS Lambda functions are incredibly powerful, but most of the most relevant documentation is buried, so here are some resources that may be helpful:
+- [Extending CloudFormation with Lambda-Backed Custom Resources](https://blog.jayway.com/2015/07/04/extending-cloudformation-with-lambda-backed-custom-resources/)
+- [Custom Resource - Request Types](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/crpg-ref-requesttypes.html)
+- [Custom Resource - Making Requests](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/crpg-ref-requests.html)
+- [Custom Resource - Sending Responses](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/crpg-ref-responses.html)
+- [Lambda limits](https://docs.aws.amazon.com/lambda/latest/dg/limits.html)
+- [Kappa config file reference](https://kappa.readthedocs.io/en/develop/config_file_example.html)
+- [Kappa commands reference](https://kappa.readthedocs.io/en/develop/commands.html#deploy)
+- [Boto3 documentation](https://boto3.readthedocs.io/en/latest/)
+- [PyMySQL documentation](https://pymysql.readthedocs.io/en/latest/)

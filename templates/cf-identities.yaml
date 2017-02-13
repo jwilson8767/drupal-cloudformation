@@ -3,7 +3,6 @@ Description: 'Creates CloudFormation IAM roles and groups for this AWS Account. 
 Parameters:
   KMSKeyArn:
     Type: String
-    Default: 'arn:aws:kms:us-east-1:104538610210:key/0ba99da8-9c78-401e-84f1-8554f7b55b71'
     Description: 'KMS Key to be used for passing credentials to ec2 instances.'
 Resources:
   CloudFormationRole:
@@ -34,6 +33,7 @@ Resources:
             - rds:*
             - sqs:*
             - ecs:*
+            - logs:*
             - lambda:*
             - rds:*
             - iam:*
@@ -76,9 +76,13 @@ Resources:
             - lambda:*
             - codepipeline:*
             - elasticbeanstalk:*
+            - autoscaling:*
+            - ec2:*
             - cloudwatch:*
+            - route53:*
             - logs:*
             - rds:*
+            - elasticloadbalancing:*
             Resource: ['*']
           - Effect: Allow
             Action:
@@ -106,6 +110,10 @@ Resources:
             - cloudformation:describe*
             - cloudformation:get*
             - cloudformation:ValidateTemplates
+            - autoscaling:describe*
+            - autoscaling:list*
+            - ec2:describe*
+            - ec2:list*
             Resource: ['*']
           - Effect: Allow
             Action:
@@ -119,7 +127,7 @@ Resources:
             - cloudformation:*
             Condition:
               StringEquals:
-                'cloudformation:TemplateURL': 'https://s3.amazonaws.com/nemac-cloudformation/drupal-application.yaml'
+                'cloudformation:TemplateURL': 'https://s3.amazonaws.com/nemac-cloudformation/drupal-project.yaml'
             Resource: ['*']
           - Effect: Allow
             Action:
@@ -159,12 +167,22 @@ Resources:
             Effect: Allow
           - Action:
             - s3:PutObject
-            Resource: 'arn:aws:s3:::nemac-artifacts-*'
+            Resource: 'arn:aws:s3:::nemac-drupal-artifacts-*'
             Effect: Allow
           - Action:
             - elasticbeanstalk:*
             - ec2:*
             - cloudwatch:*
+            - logs:*
+            - elasticloadbalancing:*
+            - autoscaling:*
+            - s3:*
+            - sns:*
+            - cloudformation:*
+            - rds:*
+            - sqs:*
+            - ecs:*
+            - iam:PassRole
             Resource: "*"
             Effect: Allow
           - Action:

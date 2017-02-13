@@ -1,1 +1,1 @@
-This custom resource is super simple, all it does is encrypt values passed to it from CloudFormation using KMS and the specified KMS Key ARN.
+This custom resource is super simple. All it does is encrypt values passed to it from CloudFormation using KMS and the specified KMS Key ARN.

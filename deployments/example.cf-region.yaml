@@ -1,0 +1,5 @@
+Stack:
+  Region: us-east-1
+  RoleARN: arn:aws:iam::104538610210:role/cloudformation-role
+  StackName: cf-region
+  TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/cf-region.yaml'

@@ -1,0 +1,4 @@
+#Deployment configs may contain sensitive information and should not be commited.
+#However, they may be stored/transfered via more secure methods if you would like to manage all deployments using awscfncli.
+*.yaml
+!example.*.yaml

@@ -9,41 +9,51 @@ import random
 import string
 import logging
 
-kmsKeyARN = None
 kmsClient = boto3.client('kms')
 connection = None
 
+kmsKeyARN = None
+application = None
+
 
 def handler(event, context):
-    global connection, kmsKeyARN
+    global connection, kmsKeyARN, application
     try:
+        print(event)
         kmsKeyARN = event['ResourceProperties']['KMSKeyARN']
-        print('connecting to mysql instance..')
+        application = event['ResourceProperties']['Application']
+        print('Connecting to mysql instance..')
         connection = pymysql.connect(host=event['ResourceProperties']['Hostname'],
                                      port=int(event['ResourceProperties']['Port']),
                                      user=event['ResourceProperties']['Username'],
                                      password=decrypt(event['ResourceProperties']['Password']),
                                      cursorclass=pymysql.cursors.DictCursor)
-        print('connected.')
+        print('Connected.')
         response = {}
         if event['RequestType'] == 'Create':
-            response = create(event['ResourceProperties']['Database'])
+            response = create(database=event['ResourceProperties']['Database'])
         elif event['RequestType'] == 'Update':
-            if event['ResourceProperties']['Database'] != event['OldResourceProperties']['Database']:
-                update(event['ResourceProperties']['Database'], event['OldResourceProperties']['Database'])
+            response = update(database=event['ResourceProperties']['Database'],
+                              old_database=event['OldResourceProperties']['Database'], username=event['PhysicalResourceId'])
         elif event['RequestType'] == 'Delete':
             if event['ResourceProperties']['RetainDatabase'] == 'no':
-                delete(event['ResourceProperties']['Database'])
+                delete(database=event['ResourceProperties']['Database'], username=event['PhysicalResourceId'])
+            else:
+                print('Retaining Database.')
         else:
-            print('invalid RequestType: ' + event['RequestType'])
-        if context is not None:
-            return cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data=response)
+            print('Invalid RequestType: ' + event['RequestType'])
+
+        return cfnresponse.send(event,
+                                context,
+                                cfnresponse.SUCCESS,
+                                response_data=response,
+                                physical_resource_id=(
+                                response['PhysicalResourceId'] if 'PhysicalResourceId' in response else None))
     except:
         logging.exception("Unhandled Exception")
-        if context is not None:
-            cfnresponse.send(event, context, cfnresponse.FAILED)
+        cfnresponse.send(event, context, cfnresponse.FAILED)
     finally:
-        print('closing connection')
+        print('closing connection.')
         connection.close()
 
 
@@ -57,9 +67,9 @@ def create(database):
     password = ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in
         range(15))
-    print('generated username and password')
+    print('generated new username and password')
     with connection.cursor() as cursor:
-        print('creating schema and user')
+        print('Creating schema and user...')
         cursor.execute("""
             CREATE SCHEMA IF NOT EXISTS `{db}` CHARACTER SET utf8 COLLATE utf8_general_ci;
             CREATE USER '{user}'@'%%' IDENTIFIED BY '{pass}';
@@ -70,57 +80,72 @@ def create(database):
             'pass': connection.escape_string(password)
         }), ())
     connection.commit()
+    print('Create complete.')
     return {
-        'username': username,
-        'encryptedPassword': encrypt(password)
+        'PhysicalResourceId': username,
+        'Username': username,
+        'EncryptedPassword': encrypt(password, database)
     }
 
 
-def update(database, old_database):
+def update(database, old_database, username):
     """
     Database name has been changed, create it if it doesn't already exist, and grant privileges to it.
     :param database: string
     :param old_database:  string
     :return:
     """
-    print('Updating schema and user')
+    password = ''.join(
+        random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in
+        range(15))
+    print('generated new password')
+    print('Updating schema and user...')
     with connection.cursor() as cursor:
         cursor.execute("""
                 CREATE SCHEMA IF NOT EXISTS `{db}` CHARACTER SET utf8 COLLATE utf8_general_ci;
-                UPDATE mysql.db SET Db = '{db}' WHERE Db='{olddb}';
+                UPDATE mysql.db SET Db = '{db}' WHERE Db='{olddb}' AND User = '{user}';
+                SET PASSWORD FOR '{user}'@'%%' = PASSWORD('{pass}');
                 """.format(**{
             'db': connection.escape_string(database),
-            'olddb': connection.escape_string(old_database)
+            'olddb': connection.escape_string(old_database),
+            'user': connection.escape_string(username),
+            'pass': connection.escape_string(password)
         }), ())
     connection.commit()
+    print('Update complete.')
+    return {
+        'Username': username,
+        'EncryptedPassword': encrypt(password, database)
+    }
 
 
-def delete(database):
+def delete(database, username):
     """
     Delete the existing schema, revoke database-level privileges, and drop user.
     :param database: string
     :return:
     """
     with connection.cursor() as cursor:
-        print('dropping schema and user')
+        print('Dropping schema and user...')
         cursor.execute("""
-                SELECT @user:=User, @host:=Host FROM mysql.db WHERE Db = '{db}';
-                DELETE FROM mysql.db WHERE Db = '{db}' AND User = @user;
-                DELETE FROM mysql.user WHERE user=@user AND host=@Host;
+                DELETE FROM mysql.db WHERE Db = '{db}' AND User = '{user}';
+                DELETE FROM mysql.user WHERE user='{user}';
                 DROP DATABASE {db};
             """.format(**{
-            'db': connection.escape_string(database)
+            'db': connection.escape_string(database),
+            'user': connection.escape_string(username),
         }), ())
     connection.commit()
 
 
-def encrypt(value):
+def encrypt(value, database):
     """
     Encrypts a value using AWS KMS
     :param value: string
     :return: string
     """
-    r = kmsClient.encrypt(KeyId=kmsKeyARN, Plaintext=value)
+    r = kmsClient.encrypt(KeyId=kmsKeyARN, Plaintext=value,
+                          EncryptionContext={"Application": application, "Database": database})
     if 'CiphertextBlob' in r:
         return base64.b64encode(r['CiphertextBlob'])
     else:

@@ -1,0 +1,14 @@
+Stack:
+  Region: us-east-1
+  StackName: testmysql
+  TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/mysql-instance.yaml'
+  Capabilities:
+  - CAPABILITY_NAMED_IAM
+  Parameters:
+    AdminUsername: 'admin'
+    AdminPassword: '<SOME PASSWORD>'
+    AllocatedStorage: '5'
+    InstanceType: db.t2.micro
+    MySQLPort: '3306'
+    MySQLVersion: 5.6.34
+

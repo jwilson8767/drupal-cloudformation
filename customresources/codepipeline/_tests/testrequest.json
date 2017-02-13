@@ -1,0 +1,15 @@
+{
+  "StackId": "arn:aws:cloudformation:us-west-2:EXAMPLE/stack-name/guid",
+  "ResponseURL": "<url to post to>",
+  "ResourceProperties": {
+    "Application": "testapp",
+    "Branch": "exp-eb",
+    "Repository": "jwilson8767/cohesivefire.nemac.org",
+    "OAuthToken": "<Github OAuth Token>",
+    "Environment": "testenv"
+  },
+  "RequestType": "Create",
+  "ResourceType": "custom::TestResource",
+  "RequestId": "asdasdffest",
+  "LogicalResourceId": "MyTestResource"
+}

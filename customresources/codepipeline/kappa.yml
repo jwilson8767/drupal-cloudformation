@@ -13,6 +13,12 @@ environments:
       - Action: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents']
         Effect: Allow
         Resource: arn:aws:logs:*:*:*
+      - Action: ['codepipeline:*']
+        Effect: Allow
+        Resource: ['*']
+      - Action: ['iam:PassRole']
+        Effect: Allow
+        Resource: ['*']
 lambda:
   description: Provides creation/deletion of CodePipeline actions to support multi-environment codepipelines in CloudFormation.
   handler: code.handler

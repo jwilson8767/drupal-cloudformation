@@ -1,28 +1,22 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Provisions IAM roles and network resources needed to provision other stacks in this Region.'
 Resources:
-  ArtifactBucket:
-    DeletionPolicy: 'Delete'
-    Properties:
-      AccessControl: 'Private'
-      BucketName: !Sub 'nemac-drupal-artifacts-${AWS::Region}'
-    Type: 'AWS::S3::Bucket'
   AssetBucket:
     DeletionPolicy: 'Retain'
     Properties:
-      BucketName: !Sub 'nemac-drupal-assets-${AWS::Region}'
+      BucketName: !Sub 'nemac-assets-${AWS::Region}'
     Type: 'AWS::S3::Bucket'
   AssetBucketPolicy:
     DeletionPolicy: 'Retain'
     DependsOn: 'AssetBucket'
     Properties:
-      Bucket: !Sub 'nemac-drupal-assets-${AWS::Region}'
+      Bucket: !Sub 'nemac-assets-${AWS::Region}'
       PolicyDocument:
         Statement:
         - Action: ['s3:GetObject']
           Effect: 'Allow'
           Principal: '*'
-          Resource: !Sub 'arn:aws:s3:::nemac-drupal-assets-${AWS::Region}/*'
+          Resource: !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}/*/public/*'
     Type: 'AWS::S3::BucketPolicy'
   PublicRoute:
     DependsOn: ['VPCInternetGatewayAttachment','PublicRouteTable']
@@ -122,17 +116,12 @@ Outputs:
     Description: 'S3 Bucket name'
     Export:
       Name: !Sub '${AWS::StackName}-ArtifactStore'
-    Value: !Sub 'nemac-drupal-artifacts-${AWS::Region}'
-  ArtifactStoreUrl:
-    Description: 'Url to the Artifact store S3 Bucket'
-    Export:
-      Name: !Sub '${AWS::StackName}-ArtifactStoreUrl'
-    Value: !GetAtt "ArtifactBucket.DomainName"
+    Value: !Sub 'elasticbeanstalk-${AWS::Region}-${AWS::AccountId}'
   AssetStore:
     Description: 'S3 Bucket name'
     Export:
       Name: !Sub '${AWS::StackName}-AssetStore'
-    Value: !Sub 'nemac-drupal-assets-${AWS::Region}'
+    Value: !Sub 'nemac-assets-${AWS::Region}'
   AssetStoreUrl:
     Description: 'Url to the Asset Store S3 Bucket'
     Export:

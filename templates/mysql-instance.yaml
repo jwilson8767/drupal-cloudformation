@@ -57,7 +57,7 @@ Resources:
       AllocatedStorage: !Ref 'AllocatedStorage'
       AutoMinorVersionUpgrade: true
       DBInstanceClass: !Ref 'InstanceType'
-      DBSubnetGroupName: {'Fn::ImportValue': !Sub 'cf-region-RDSSubnetGroup'}
+      DBSubnetGroupName: !ImportValue 'cf-region-RDSSubnetGroup'
       Engine: MySQL
       EngineVersion: !Ref 'MySQLVersion'
       MasterUserPassword: !Ref 'AdminPassword'
@@ -65,7 +65,7 @@ Resources:
       MultiAZ: true
       Port: !Ref 'MySQLPort'
       PubliclyAccessible: true
-      VPCSecurityGroups: !GetAtt 'RDSInstanceSecurityGroup.GroupId'
+      VPCSecurityGroups: [!GetAtt 'RDSInstanceSecurityGroup.GroupId']
     Type: 'AWS::RDS::DBInstance'
   RDSInstanceSecurityGroup:
     Properties:

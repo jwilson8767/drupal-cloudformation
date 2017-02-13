@@ -1,41 +1,53 @@
 from __future__ import print_function
 import boto3
 import cfnresponse
+import logging
 
 
 def handler(event, context):
-    args = {
-        "pipeline": event['ResourceProperties']['PipelineName'],
-        "token": event['ResourceProperties']['OAuthToken'],
-        "owner": str(event['ResourceProperties'][:'Repository'])[str(event['ResourceProperties']['Repository']).index('/')],
-        "repo": str(event['ResourceProperties']['Repository'])[str(event['ResourceProperties']['Repository']).index('/') + 1:],
-        "branch": event['ResourceProperties']['Branch'],
-        "environment": event['ResourceProperties']['Environment']
-    }
-    if event['RequestType'] == 'Create':
-        create(**args)
-    elif event['RequestType'] == 'Update':
-        update(**args)
-    elif event['RequestType'] == 'Delete':
-        delete(**args)
-    return cfnresponse.send(event, context, cfnresponse.SUCCESS)
+    try:
+        print('checking args..')
+        args = {
+            "application": event['ResourceProperties']['Application'],
+            "token": event['ResourceProperties']['OAuthToken'],
+            "owner": str(event['ResourceProperties']['Repository'])[:str(event['ResourceProperties']['Repository']).index('/')],
+            "repo": str(event['ResourceProperties']['Repository'])[
+                    str(event['ResourceProperties']['Repository']).index('/') + 1:],
+            "branch": event['ResourceProperties']['Branch'],
+            "environment": event['ResourceProperties']['Environment']
+        }
+        client = boto3.client('codepipeline')
+        pipeline = client.get_pipeline(name=args['application'])['pipeline']
+        if event['RequestType'] == 'Create':
+            print('creating pipeline')
+            pipeline = create(pipeline, **args)
+        elif event['RequestType'] == 'Update':
+            print('removing old pipeline')
+            pipeline = delete(pipeline,event['OldResourceProperties']['Environment'])
+            pipeline = create(pipeline, **args)
+        elif event['RequestType'] == 'Delete':
+            print('deleting pipeline')
+            pipeline = delete(pipeline, args['environment'])
+
+        pipeline = dummy_actions(pipeline)
+        client.update_pipeline(pipeline=pipeline)
+        cfnresponse.send(event, context, cfnresponse.SUCCESS)
+    except:
+        logging.exception("Unhandled Exception")
+        cfnresponse.send(event, context, cfnresponse.FAILED)
+        raise
 
 
-def create(pipeline, token, owner, repo, branch, application, environment):
-    client = boto3.client('codepipeline')
-    config = client.get_pipeline(
-        name=pipeline,
-        version=1
-    )
-    config['pipeline']['stages'][0]['actions'].push({
+def create(pipeline, application, token, owner, repo, branch, environment):
+    pipeline['stages'][0]['actions'].append({
+        "name": environment,
         "outputArtifacts": [
             {"name": environment}
         ],
         "inputArtifacts": [],
-        "name": environment,
         "configuration": {
             "Repo": repo,
-            "OAuthToken": "****",
+            "OAuthToken": token,
             "Owner": owner,
             "Branch": branch
         },
@@ -47,15 +59,14 @@ def create(pipeline, token, owner, repo, branch, application, environment):
             "category": "Source"
         }
     })
-
-    config['pipeline']['stages'][1]['actions']({
+    pipeline['stages'][1]['actions'].append({
+        "name": environment,
         "runOrder": 1,
         "configuration": {
             "EnvironmentName": environment,
             "ApplicationName": application
         },
         "outputArtifacts": [],
-        "name": environment,
         "actionTypeId": {
             "owner": "AWS",
             "version": "1",
@@ -68,21 +79,28 @@ def create(pipeline, token, owner, repo, branch, application, environment):
             }
         ]
     })
+    return pipeline
 
 
-def update(pipeline, token, old, new):
-    return
+def delete(pipeline, environment):
+    stages = []
+    for stage in  pipeline['stages']:
+        actions = []
+        for action in stage['actions']:
+            if action['name'] != environment:
+                actions.append(action)
+        stage['actions'] = actions
+        stages.append(stage)
+    pipeline['stages'] = stages
+    return pipeline
 
 
-def delete(pipeline, token, environment):
-    return
-
-
-def dummy_actions(config):
+def dummy_actions(pipeline):
     """Adds/Removes dummy actions as needed to comply with CodePipeline's requirement
      that each pipeline must have at least one source and one deploy action."""
-    if len(config['pipeline']['stages'][0]['Actions']) == 0:
-        config['pipeline']['stages'][0]['Actions'] += {
+    if len(pipeline['stages'][0]['actions']) == 0 or len(pipeline['stages'][1]['actions']) == 0:
+        pipeline['stages'][0]['actions'].append({
+            "name": "dummy",
             "runOrder": 1,
             "actionTypeId": {
                 "category": "Source",
@@ -99,15 +117,10 @@ def dummy_actions(config):
             "configuration": {
                 "S3Bucket": "dummybucket",
                 "S3ObjectKey": "dummyobject.zip"
-            },
-            "name": "dummysource"
-        }
-    elif len(config['pipeline']['stages'][0]['Actions']) > 1:
-        config['pipeline']['stages'][0]['Actions'][:] = [x for x in config['pipeline']['stages'][0]['Actions'] if
-                                                         not x['name'] == 'dummysource']
-
-    if len(config['pipeline']['stages'][1]['Actions']) == 0:
-        config['pipeline']['stages'][1]['Actions'] += {
+            }
+        })
+        pipeline['stages'][1]['actions'].append({
+            "name": "dummy",
             "runOrder": 1,
             "actionTypeId": {
                 "category": "Deploy",
@@ -126,12 +139,9 @@ def dummy_actions(config):
                 "TemplatePath": "MyApp::a.json",
                 "RoleArn": "arn:aws:iam::104538610210:role/nemac-cloudformation-role",
                 "TemplateConfiguration": "MyApp::asdf.json",
-                "StackName": "drupal-artifacts"
-            },
-            "name": "dummydeploy"
-        }
-    elif len(config['pipeline']['stages'][1]['Actions']) > 1:
-        config['pipeline']['stages'][1]['Actions'][:] = [x for x in config['pipeline']['stages'][1]['Actions'] if
-                                                         not x['name'] == 'dummydeploy']
-
-    return config
+                "StackName": "dummy"
+            }
+        })
+    elif len(pipeline['stages'][0]['actions']) > 1 and len(pipeline['stages'][1]['actions']) > 1:
+        pipeline = delete(pipeline, 'dummy')
+    return pipeline
