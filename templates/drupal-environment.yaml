@@ -4,7 +4,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label: {default: General Configuration}
-      Parameters: [DrupalApplicationStack, MySQLInstanceStack, AssetStoreStack]
+      Parameters: [ProjectStack, MySQLInstanceStack, AssetStoreStack]
     - Label: {default: Deployment Configuration}
       Parameters: [GitRepository, GitBranch, KeyPair]
     - Label: {default: Advanced Configuration}
@@ -13,7 +13,7 @@ Parameters:
   DatabaseName: {Description: Leave blank to use this stack's name. If a database
       with this name already exists it will be used instead of creating a new database.,
     Type: String, Default: ""}
-  DrupalApplicationStack:
+  ProjectStack:
     AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$'
     Description: 'The Drupal Application stack name to use for this environment'
     MaxLength: 255
@@ -45,7 +45,7 @@ Conditions:
 Resources:
   DevelopmentConfigurationTemplate:
     Properties:
-      ApplicationName: !Ref 'DrupalApplicationStack'
+      ApplicationName: !Ref 'ProjectStack'
       Description: ''
       OptionSettings:
       - Namespace: aws:elasticbeanstalk:environment
@@ -66,7 +66,7 @@ Resources:
         ResourceName: AWSEBAutoScalingLaunchConfiguration
       - Namespace: "aws:autoscaling:launchconfiguration"
         OptionName: "EC2KeyName"
-        Value: "cf-admin"
+        Value: "cfn-admin"
         ResourceName: "AWSEBAutoScalingLaunchConfiguration"
       - Namespace: aws:cloudformation:template:parameter
         OptionName: InstancePort
@@ -75,11 +75,11 @@ Resources:
         OptionName: Subnets
         ResourceName: AWSEBAutoScalingGroup
         Value:
-          "Fn::Join": [",", [!ImportValue 'cf-region-SubnetA',!ImportValue 'cf-region-SubnetB']]
+          "Fn::Join": [",", [!ImportValue 'cfn-region-SubnetA',!ImportValue 'cfn-region-SubnetB']]
       - Namespace: aws:ec2:vpc
         OptionName: VPCId
         ResourceName: AWSEBSecurityGroup
-        Value: !ImportValue 'cf-region-VpcId'
+        Value: !ImportValue 'cfn-region-VpcId'
       - Namespace: aws:elasticbeanstalk:cloudwatch:logs
         OptionName: DeleteOnTerminate
         Value: 'true'
@@ -146,16 +146,22 @@ Resources:
         Value: 'true'
       - Namespace: aws:elasticbeanstalk:application:environment
         OptionName: 'APPLICATION'
-        Value: !Ref 'DrupalApplicationStack'
+        Value: !Ref 'ProjectStack'
       - Namespace: aws:elasticbeanstalk:application:environment
         OptionName: 'ASSET_STORE'
-        Value: !ImportValue 'cf-region-AssetStore'
+        Value: !ImportValue 'cfn-region-AssetStore'
       - Namespace: aws:elasticbeanstalk:application:environment
         OptionName: 'REGION'
         Value: !Ref 'AWS::Region'
       - Namespace: aws:elasticbeanstalk:application:environment
         OptionName: 'AWS_DEFAULT_REGION'
         Value: !Ref 'AWS::Region'
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'ENABLE_XDEBUG'
+        Value: '1'
+      - Namespace: aws:elasticbeanstalk:application:environment
+        OptionName: 'COMPOSER_HOME'
+        Value: '/tmp/composer/'
       - Namespace: aws:elasticbeanstalk:application:environment
         OptionName: 'DRUPAL_DB_HOSTNAME'
         Value: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-Hostname'}
@@ -189,7 +195,7 @@ Resources:
       SecurityGroupIngress:
       - {CidrIp: 0.0.0.0/0, FromPort: '80', IpProtocol: tcp, ToPort: '80'}
       - {CidrIp: 0.0.0.0/0, FromPort: '443', IpProtocol: tcp, ToPort: '443'}
-      VpcId: {'Fn::ImportValue': !Sub 'cf-region-VpcId'}
+      VpcId: {'Fn::ImportValue': !Sub 'cfn-region-VpcId'}
     Type: AWS::EC2::SecurityGroup
   EC2Role:
     Type: AWS::IAM::Role
@@ -229,17 +235,17 @@ Resources:
             Resource: !ImportValue 'KMSKeyArn'
             Condition:
               "StringEquals":
-                "kms:EncryptionContext:Application": !Ref 'DrupalApplicationStack'
+                "kms:EncryptionContext:Application": !Ref 'ProjectStack'
                 "kms:EncryptionContext:Database": !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
             Sid: KMSKeyGrant
           Version: '2012-10-17'
-        PolicyName: !Sub '${DrupalApplicationStack}-${AWS::StackName}-ec2-role'
+        PolicyName: !Sub '${ProjectStack}-${AWS::StackName}-ec2-role'
   ElasticBeanstalkEnvironment:
     Type: 'AWS::ElasticBeanstalk::Environment'
     Version: '1.0'
     Properties:
-      ApplicationName: !Ref 'DrupalApplicationStack'
-      Description: !Sub 'An environment for ${DrupalApplicationStack}'
+      ApplicationName: !Ref 'ProjectStack'
+      Description: !Sub 'An environment for ${ProjectStack}'
       EnvironmentName: !Ref 'AWS::StackName'
       TemplateName: !Ref 'DevelopmentConfigurationTemplate'
     DependsOn: 'DevelopmentConfigurationTemplate'
@@ -247,8 +253,8 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     Version: '1.0'
     Properties:
-      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cf-mysqldatabase'
-      Application: !Ref 'DrupalApplicationStack'
+      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cfn-mysqldatabase'
+      Application: !Ref 'ProjectStack'
       Database: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
       Hostname: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-Hostname'}
       KMSKeyARN: !ImportValue 'KMSKeyArn'
@@ -258,12 +264,12 @@ Resources:
       Password: {'Fn::ImportValue': !Sub '${MySQLInstanceStack}-AdminPassword'}
   CodePipeline:
     Properties:
-      Application: !Ref 'DrupalApplicationStack'
+      Application: !Ref 'ProjectStack'
       Environment: !Ref 'AWS::StackName'
       Branch: !Ref 'GitBranch'
       Repository: !Ref 'GitRepository'
       OAuthToken: !Ref 'GitOAuthToken'
-      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cf-codepipeline'
+      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cfn-codepipeline'
     Type: AWS::CloudFormation::CustomResource
     Version: '1.0'
     DependsOn: 'ElasticBeanstalkEnvironment'

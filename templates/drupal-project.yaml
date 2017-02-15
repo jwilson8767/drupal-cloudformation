@@ -13,7 +13,7 @@ Resources:
   CodePipeline:
     Properties:
       ArtifactStore:
-        Location: !ImportValue 'cf-region-ArtifactStore'
+        Location: !ImportValue 'cfn-region-ArtifactStore'
         Type: S3
       Name: !Ref 'AWS::StackName'
       RoleArn: !ImportValue 'CodePipelineRoleArn'

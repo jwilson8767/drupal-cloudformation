@@ -1,7 +1,7 @@
 Stack:
   Region: us-east-1
-  StackName: cf-identities
-  TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/cf-identities.yaml'
+  StackName: cfn-identities
+  TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/cfn-identities.yaml'
   Capabilities:
   - CAPABILITY_NAMED_IAM
   Parameters:

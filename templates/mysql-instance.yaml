@@ -30,8 +30,8 @@ Resources:
       GroupDescription: 'Allows EC2 instances to connect to MySQL Instance'
       Tags:
       - Key: Name
-        Value: !Sub 'cf-rds-ec2-${AWS::StackName}'
-      VpcId: !ImportValue 'cf-region-VpcId'
+        Value: !Sub 'cfn-rds-ec2-${AWS::StackName}'
+      VpcId: !ImportValue 'cfn-region-VpcId'
     Type: AWS::EC2::SecurityGroup
   EC2InstanceSecurityGroupEgress:
     Properties:
@@ -47,7 +47,7 @@ Resources:
     Properties:
       KMSKeyARN: !ImportValue 'KMSKeyArn'
       Plaintext: !Ref 'AdminPassword'
-      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cf-encryptedvalue'
+      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cfn-encryptedvalue'
     Type: AWS::CloudFormation::CustomResource
     Version: '1.0'
   RDSInstance:
@@ -57,7 +57,7 @@ Resources:
       AllocatedStorage: !Ref 'AllocatedStorage'
       AutoMinorVersionUpgrade: true
       DBInstanceClass: !Ref 'InstanceType'
-      DBSubnetGroupName: !ImportValue 'cf-region-RDSSubnetGroup'
+      DBSubnetGroupName: !ImportValue 'cfn-region-RDSSubnetGroup'
       Engine: MySQL
       EngineVersion: !Ref 'MySQLVersion'
       MasterUserPassword: !Ref 'AdminPassword'
@@ -74,8 +74,8 @@ Resources:
       - {CidrIp: 0.0.0.0/0, IpProtocol: '-1'}
       Tags:
       - Key: Name
-        Value: !Sub 'cf-rds-${AWS::StackName}'
-      VpcId: !ImportValue 'cf-region-VpcId'
+        Value: !Sub 'cfn-rds-${AWS::StackName}'
+      VpcId: !ImportValue 'cfn-region-VpcId'
     Type: AWS::EC2::SecurityGroup
   RDSInstanceSecurityGroupIngress:
     Properties:

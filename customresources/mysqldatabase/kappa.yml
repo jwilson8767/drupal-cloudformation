@@ -1,5 +1,5 @@
 ---
-name: cf-mysqldatabase
+name: cfn-mysqldatabase
 source: _build
 environments:
   dev:

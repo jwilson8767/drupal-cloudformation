@@ -12,8 +12,14 @@ Logs are output to [CloudWatch](https://console.aws.amazon.com/cloudwatch/home?r
 - [Kappa](https://github.com/garnaat/kappa) - `pip install kappa` (automated Lambda function deployment)
 
 ## Deploying changes
-1. Update any `kappa.yml` files to match your desired AWS CLI profile (use `aws configure --profile <profile>` to add a new profile if needed, KMS Key ARN (default is fine if used on NEMAC's AWS account), and function names (to avoid replacing the current prodcution lambda function).
+1. Update any `kappa.yml` files to match your desired AWS CLI profile (use `aws configure --profile <profile>` to add a new profile if needed.<!-- TODO After https://github.com/garnaat/kappa/pull/104 is merged, remove this step and update kappa.yml to use this as default.-->
 2. Deploy your changes by either entering a specific lambda function's directory and using `./build.sh && kappa deploy` or deploying all lambda functions using `./customresources/deploy.sh`. **Your changes will immediately go into production, rename the function in `kappa.yml` for development/testing**
+
+<span id="deploy-new-account"></span>
+## Deploying on a new AWS Account
+1. Create a new KMS key.
+2. Update all kappa.yml files with the new KMS Key Arn.
+3. Use `deploy-customresources.sh` to build and deploy all custom resources.
 
 ## Gotcha's
 - Lambda functions inside a VPC only access AWS services which have an endpoint in that VPC. Currently S3 is the only AWS service to have an endpoint in every VPC by default. For this reason I recommend only creating Lambda functions outside VPCs. If they need to interact with resources inside a VPC, use security groups to allow them to do so.

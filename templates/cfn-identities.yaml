@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Creates CloudFormation IAM roles and groups for this AWS Account. There should only be one of this type of stack per account. StackName: cf-identities'
+Description: 'Creates CloudFormation IAM roles and groups for this AWS Account. There should only be one of this type of stack per account. StackName: cfn-identities'
 Parameters:
   KMSKeyArn:
     Type: String
@@ -45,10 +45,10 @@ Resources:
   AdminGroup:
     Type: AWS::IAM::Group
     Properties:
-      GroupName: 'cf-admins'
+      GroupName: 'cfn-admins'
       Path: "/"
       Policies:
-      - PolicyName: 'cf-admins-policy'
+      - PolicyName: 'cfn-admins-policy'
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -91,10 +91,10 @@ Resources:
   DeveloperGroup:
     Type: AWS::IAM::Group
     Properties:
-      GroupName: 'cf-developers'
+      GroupName: 'cfn-developers'
       Path: "/"
       Policies:
-      - PolicyName: 'cf-developers-policy'
+      - PolicyName: 'cfn-developers-policy'
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
