@@ -12,12 +12,6 @@ NEMAC CloudFormation
 * [Usage](#usage)
     * [Starting a new project](#new-project)
 
-* [](#)
-* [](#)
-* [](#)
-* [](#)
-
-
 ## <span id="stack-types"></span>Stack Types
 
 - <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=cfn-identities&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/cfn-identities.yaml">**CloudFormation Identities**</a> -
