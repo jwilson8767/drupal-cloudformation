@@ -70,7 +70,7 @@ This requires you to be in the `cfn-admins` IAM group.
     - If this environment will go into production at any poind check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  
     - Ensure you set the IAM role to
      `cloudformation-role`.
-   - check I acknowledge that AWS cloudformation might create IAM resources.
+   - check I acknowledge that AWS cloudformation might create IAM resources.  (This is at the bottom of the conformation page)
    - The environment will take a few minutes to spin up and deploy, grab some coffee.
 11. Your environment should not be ready and functional. Connect to it using the link given in the output of the environment stack (or the Elastic Beanstalk console). Note that https is not yet implemented and that this section does not cover using Route53 to direct traffic to your environment.
 
@@ -92,7 +92,7 @@ This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
     - If this environment will go into production at any poind check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  
     - Ensure you set the IAM role to
      `cloudformation-role`.
-   - check I acknowledge that AWS cloudformation might create IAM resources.
+   - check I acknowledge that AWS cloudformation might create IAM resources. (This is at the bottom of the conformation page)
    - The environment will take a few minutes to spin up and deploy, grab some coffee.
 5. When the environment stack creation completes, copy the EB Domain Name from the Outputs panel to your address bar, then add `/user` to login to your drupal environment.
 
