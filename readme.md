@@ -73,7 +73,7 @@ Term|Definition
     - Create a GitHub repository for your project, then clone it into a local directory.
     <!--  TODO Update this link when the template project files have a repository -->
     - Pull the drupal project template files into the project directory using `git pull https://github.com/jwilson8767/nemac-drupal-template.git`
-    - Commit your code to the github repository using `git add --all && commit -m "template" && push origin master`
+    - Commit your code to the github repository using `git add --all && git commit -m "template" && git push origin master`
 3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
 5. When the environment stack creation completes, copy the EB Domain Name from the Outputs panel to your address bar, then add `/user` to login to your drupal environment.
 
