@@ -130,7 +130,7 @@ def delete(database, username):
         cursor.execute("""
                 DELETE FROM mysql.db WHERE Db = '{db}' AND User = '{user}';
                 DELETE FROM mysql.user WHERE user='{user}';
-                DROP DATABASE {db};
+                DROP DATABASE `{db}`;
             """.format(**{
             'db': connection.escape_string(database),
             'user': connection.escape_string(username),
