@@ -1,11 +1,23 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Provisions IAM roles and network resources needed to provision other stacks in this Region.'
+Parameters:
+  ExistingAssetBucket:
+    Description: The database admin account password
+    Type: String
+Conditions:
+  NotHasExistingAssetBucket: !Equals [!Ref 'ExistingAssetBucket', '']
 Resources:
+  # The Artifact store bucket is used for artifacts created by CodePipeline and Elastic Beanstalk when pulling down/testing git repos.
+  ArtifactBucket:
+    Properties:
+      BucketName: !Sub 'nemac-artifacts-${AWS::Region}'
+    Type: 'AWS::S3::Bucket'
+  # The Asset Bucket is used for static assets that should be publicly accessible.
   AssetBucket:
-    DeletionPolicy: 'Retain'
     Properties:
       BucketName: !Sub 'nemac-assets-${AWS::Region}'
     Type: 'AWS::S3::Bucket'
+    Condition: NotHasExistingAssetBucket
   AssetBucketPolicy:
     DeletionPolicy: 'Retain'
     DependsOn: 'AssetBucket'
@@ -18,60 +30,8 @@ Resources:
           Principal: '*'
           Resource: !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}/*/public/*'
     Type: 'AWS::S3::BucketPolicy'
-  PublicRoute:
-    DependsOn: ['VPCInternetGatewayAttachment','PublicRouteTable']
-    Properties:
-      DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref 'VPCInternetGateway'
-      RouteTableId: !Ref 'PublicRouteTable'
-    Type: 'AWS::EC2::Route'
-  PublicRouteTable:
-    DependsOn: 'VPC'
-    Properties:
-      VpcId: !Ref 'VPC'
-      Tags:
-      - Key: 'Application'
-        Value: !Ref 'AWS::StackId'
-      - Key: Network
-        Value: Public
-    Type: 'AWS::EC2::RouteTable'
-  PublicSubnetRouteTableAssociationSubnetA:
-    DependsOn: [VPCInternetGateway, SubnetA]
-    Properties:
-      RouteTableId: !Ref 'PublicRouteTable'
-      SubnetId: !Ref 'SubnetA'
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-  PublicSubnetRouteTableAssociationSubnetB:
-    DependsOn: [VPCInternetGateway, SubnetB]
-    Properties:
-      RouteTableId: !Ref 'PublicRouteTable'
-      SubnetId: !Ref 'SubnetB'
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-  RDSSubnetGroup:
-    DependsOn: ['SubnetA', 'SubnetB']
-    Properties:
-      DBSubnetGroupDescription: 'default'
-      SubnetIds:
-      - !Ref 'SubnetA'
-      - !Ref 'SubnetB'
-      Tags: []
-    Type: 'AWS::RDS::DBSubnetGroup'
-  SubnetA:
-    DependsOn: 'VPC'
-    Properties:
-      AvailabilityZone: !Sub '${AWS::Region}a'
-      CidrBlock: '172.17.1.0/24'
-      MapPublicIpOnLaunch: 'false'
-      VpcId: !Ref 'VPC'
-    Type: 'AWS::EC2::Subnet'
-  SubnetB:
-    DependsOn: 'VPC'
-    Properties:
-      AvailabilityZone: !Sub '${AWS::Region}b'
-      CidrBlock: '172.17.2.0/24'
-      MapPublicIpOnLaunch: 'false'
-      VpcId: !Ref 'VPC'
-    Type: 'AWS::EC2::Subnet'
+    Condition: NotHasExistingAssetBucket
+  # VPC for all CloudFormation resources in this region.
   VPC:
     Properties:
       CidrBlock: '172.17.0.0/16'
@@ -81,17 +41,97 @@ Resources:
       - Key: 'Name'
         Value: !Ref 'AWS::StackName'
     Type: 'AWS::EC2::VPC'
-  VPCInternetGateway:
-    DependsOn: 'VPC'
-    Properties: {}
-    Type: 'AWS::EC2::InternetGateway'
-  VPCInternetGatewayAttachment:
-    DependsOn: ['VPCInternetGateway', 'VPC']
+  # The InternetGateway allows egress from the VPC
+  InternetGateway:
+      DependsOn: 'VPC'
+      Properties: {}
+      Type: 'AWS::EC2::InternetGateway'
+  InternetGatewayAttachment:
+    DependsOn: ['InternetGateway', 'VPC']
     Properties:
-      InternetGatewayId: !Ref 'VPCInternetGateway'
+      InternetGatewayId: !Ref 'InternetGateway'
       VpcId: !Ref 'VPC'
     Type: 'AWS::EC2::VPCGatewayAttachment'
+  InternetGatewayRouteTable:
+    DependsOn: 'VPC'
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+      - Key: 'Application'
+        Value: !Ref 'AWS::StackId'
+      - Key: Network
+        Value: Public
+    Type: 'AWS::EC2::RouteTable'
+  InternetGatewayRouteTableAssociation:
+    DependsOn: ['InternetGatewayAttachment','InternetGatewayRouteTable']
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'InternetGateway'
+      RouteTableId: !Ref 'InternetGatewayRouteTable'
+    Type: 'AWS::EC2::Route'
+  # One subnet per Availability Zone is sufficient for drupal web servers.
+  SubnetA:
+    DependsOn: 'VPC'
+    Properties:
+      AvailabilityZone: !Sub '${AWS::Region}a'
+      CidrBlock: '172.17.0.0/22'
+      MapPublicIpOnLaunch: 'false'
+      VpcId: !Ref 'VPC'
+    Type: 'AWS::EC2::Subnet'
+  SubnetARouteTableAssociation:
+    DependsOn: ['InternetGateway', 'SubnetA']
+    Properties:
+      RouteTableId: !Ref 'InternetGatewayRouteTable'
+      SubnetId: !Ref 'SubnetA'
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+  SubnetB:
+    DependsOn: 'VPC'
+    Properties:
+      AvailabilityZone: !Sub '${AWS::Region}b'
+      CidrBlock: '172.17.4.0/22'
+      MapPublicIpOnLaunch: 'false'
+      VpcId: !Ref 'VPC'
+    Type: 'AWS::EC2::Subnet'
+  SubnetBRouteTableAssociation:
+    DependsOn: ['InternetGateway', 'SubnetB']
+    Properties:
+      RouteTableId: !Ref 'InternetGatewayRouteTable'
+      SubnetId: !Ref 'SubnetB'
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+  # Defines Security Groups RDS can create endpoints in.
+  RDSSubnetGroup:
+    DependsOn: ['SubnetA', 'SubnetB']
+    Properties:
+      DBSubnetGroupDescription: 'default'
+      SubnetIds:
+      - !Ref 'SubnetA'
+      - !Ref 'SubnetB'
+      Tags: []
+    Type: 'AWS::RDS::DBSubnetGroup'
+  DevWhitelistSecurityGroup:
+    Properties:
+      GroupDescription: 'Ingress to EC2/RDS instances in this region from WAN IPs for development purposes.'
+      Tags:
+      - Key: Name
+        Value: !Sub 'dev-whitelist-${AWS::Region}'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::SecurityGroup
 Outputs:
+  ArtifactStore:
+    Description: 'S3 Bucket name for artifacts'
+    Export:
+      Name: !Sub '${AWS::StackName}-ArtifactStore'
+    Value: !Sub 'elasticbeanstalk-${AWS::Region}-${AWS::AccountId}'
+  AssetStore:
+    Description: 'S3 Bucket name'
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetStore'
+    Value: !If ['NotHasExistingAssetBucket',!Sub 'nemac-assets-${AWS::Region}',!Ref 'ExistingAssetBucket']
+  AssetStoreUrl:
+    Description: 'Url to the Asset Store S3 Bucket'
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetStoreUrl'
+    Value: !If ['NotHasExistingAssetBucket', !GetAtt 'AssetBucket.DomainName', !Sub 'https://s3.amazonaws.com/${ExistingAssetBucket}/']
   VpcId:
     Description: 'VpcId'
     Export:
@@ -112,18 +152,8 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-SubnetB'
     Value: !Ref 'SubnetB'
-  ArtifactStore:
-    Description: 'S3 Bucket name'
+  DevWhitelistSecurityGroup:
+    Description: 'Developer IP Whitelist Security Group Id'
     Export:
-      Name: !Sub '${AWS::StackName}-ArtifactStore'
-    Value: !Sub 'elasticbeanstalk-${AWS::Region}-${AWS::AccountId}'
-  AssetStore:
-    Description: 'S3 Bucket name'
-    Export:
-      Name: !Sub '${AWS::StackName}-AssetStore'
-    Value: !Sub 'nemac-assets-${AWS::Region}'
-  AssetStoreUrl:
-    Description: 'Url to the Asset Store S3 Bucket'
-    Export:
-      Name: !Sub '${AWS::StackName}-AssetStoreUrl'
-    Value: !GetAtt "AssetBucket.DomainName"
+      Name: !Sub '${AWS::StackName}-DevWhitelistSecurityGroup'
+    Value: !GetAtt 'DevWhitelistSecurityGroup.GroupId'

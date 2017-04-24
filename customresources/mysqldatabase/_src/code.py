@@ -159,9 +159,11 @@ def decrypt(value):
     Decrypts a value using AWS KMS
     :type value: string
     """
+    print('Decrypting value..')
     r = kmsClient.decrypt(CiphertextBlob=base64.b64decode(value))
 
     if 'Plaintext' in r:
+        print('Decrypted.')
         return r['Plaintext']
     else:
         print('Invalid response from kms during decrypt:')

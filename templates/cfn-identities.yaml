@@ -3,7 +3,7 @@ Description: 'Creates CloudFormation IAM roles and groups for this AWS Account. 
 Parameters:
   KMSKeyArn:
     Type: String
-    Description: 'KMS Key to be used for passing credentials to ec2 instances.'
+    Description: 'KMS Key to be used for encrypting database credentials.'
 Resources:
   CloudFormationRole:
     Type: 'AWS::IAM::Role'
@@ -38,7 +38,7 @@ Resources:
             - rds:*
             - iam:*
             - route53:*
-            Resource: "*"
+            Resource: '*'
             Effect: Allow
           Version: '2012-10-17'
         PolicyName: cloudformation-role-policy
@@ -46,31 +46,30 @@ Resources:
     Type: AWS::IAM::Group
     Properties:
       GroupName: 'cfn-admins'
-      Path: "/"
+      Path: '/'
       Policies:
       - PolicyName: 'cfn-admins-policy'
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
-          - Effect: "Allow"
+          - Sid: AllowReadS3
+            Effect: 'Allow'
             Action:
-            - s3:CreateBucket
-            - s3:GetBucketLocation
             - s3:ListAllMyBuckets
-            Resource: "arn:aws:s3:::*"
-          - Effect: Allow
+            - s3:Get*
+            Resource: '*'
+          - Sid: AllowReadWriteTemplates
+            Effect: Allow
             Action:
             - s3:*
             Resource: ['arn:aws:s3:::nemac-cloudformation', 'arn:aws:s3:::nemac-cloudformation/*']
-          - Effect: Allow
+          - Sid: AllowReadWriteAssets
+            Effect: Allow
             Action:
             - s3:*
-            Resource: ['arn:aws:s3:::nemac-lambda*', 'arn:aws:s3:::nemac-lambda*/*']
-          - Effect: Allow
-            Action:
-            - s3:*
-            Resource: ['arn:aws:s3:::nemac-drupal-*', 'arn:aws:s3:::nemac-drupal-*/*']
-          - Effect: Allow
+            Resource: ['arn:aws:s3:::nemac-assets-*', 'arn:aws:s3:::nemac-assets-*/*']
+          - Sid: AllowCfnResourcesFull
+            Effect: Allow
             Action:
             - cloudformation:*
             - lambda:*
@@ -79,59 +78,106 @@ Resources:
             - autoscaling:*
             - ec2:*
             - cloudwatch:*
-            - route53:*
+            - route53:Get*
+            - route53:List*
+            - route53:Describe*
             - logs:*
             - rds:*
             - elasticloadbalancing:*
+            - sns:*
             Resource: ['*']
-          - Effect: Allow
+          - Sid: AllowPassCfnRole
+            Effect: Allow
             Action:
             - iam:PassRole
-            Resource: !GetAtt CloudFormationRole.Arn
+            Resource: !GetAtt 'CloudFormationRole.Arn'
   DeveloperGroup:
     Type: AWS::IAM::Group
     Properties:
       GroupName: 'cfn-developers'
-      Path: "/"
+      Path: '/'
       Policies:
       - PolicyName: 'cfn-developers-policy'
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
-          - Effect: Allow
+          - Sid: AllowReadWriteAssets
+            Effect: Allow
+            Action:
+            - s3:Get*
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:*MultipartUpload*
+            - s3:ListBucket
+            Resource: ['arn:aws:s3:::nemac-assets-*', 'arn:aws:s3:::nemac-assets-*/*']
+          - Sid: AllowReadTemplates
+            Effect: Allow
             Action:
             - s3:GetObject
             - s3:GetObjectVersion
             - s3:ListBucket
             Resource: ['arn:aws:s3:::nemac-cloudformation', 'arn:aws:s3:::nemac-cloudformation/*']
-          - Effect: Allow
+          - Sid: AllowCfnReadAll
+            Effect: Allow
             Action:
-            - cloudformation:list*
-            - cloudformation:describe*
-            - cloudformation:get*
-            - cloudformation:ValidateTemplates
-            - autoscaling:describe*
-            - autoscaling:list*
-            - ec2:describe*
-            - ec2:list*
+            - cloudformation:List*
+            - cloudformation:Describe*
+            - cloudformation:Get*
+            - cloudformation:ValidateTemplate
+            - cloudformation:PreviewStackUpdate
+            - cloudformation:CreateChangeSet
+            - cloudformation:EstimateTemplateCost
+            - autoscaling:Describe*
+            - autoscaling:List*
+            - elasticbeanstalk:Describe*
+            - route53:Get*
+            - route53:List*
+            - route53:Describe*
+            - ec2:Describe*
+            - ec2:List*
+            - cloudwatch:Get*
+            - cloudwatch:List*
+            - cloudwatch:Describe*
+            - logs:Describe*
+            - logs:Get*
+            - sns:Get*
+            - sns:List*
             Resource: ['*']
-          - Effect: Allow
+          - Sid: AllowCreateUpdateOnTemplatesCreatedWithTheseTemplates
+            Effect: Allow
             Action:
-            - cloudformation:*
+            - cloudformation:CreateStack
+            - cloudformation:UpdateStack
+            - cloudformation:ExecuteChangeSet
+            - cloudformation:CancelUpdateRollback
+            - cloudformation:ContinueUpdateRollback
             Condition:
-              StringEquals:
-                'cloudformation:TemplateURL': 'https://s3.amazonaws.com/nemac-cloudformation/drupal-environment.yaml'
+              'ForAllValues:StringEquals':
+                'cloudformation:TemplateURL':
+                - 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml'
+                - 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml'
             Resource: ['*']
-          - Effect: Allow
+          - Sid: AllowCreateUpdateOnTemplatesCreatedWithTheseTemplates
+            Effect: Allow
             Action:
-            - cloudformation:*
-            Condition:
-              StringEquals:
-                'cloudformation:TemplateURL': 'https://s3.amazonaws.com/nemac-cloudformation/drupal-project.yaml'
-            Resource: ['*']
-          - Effect: Allow
+            - cloudformation:DeleteStack
+            Resource: ['arn:aws:cloudformation:::stack/*-project/*','arn:aws:cloudformation:::stack/*-env/*' ]
+          - Sid: AllowPassCFNRole
+            Effect: Allow
             Action:
             - iam:PassRole
+            Resource: !GetAtt CloudFormationRole.Arn
+          - Sid: AllowPassCfnRole
+            Effect: Allow
+            Action:
+            - CodePipeline:ListPipelines
+            - CodePipeline:ListActionTypes
+            - CodePipeline:Get*
+            - CodePipeline:PollForJobs
+            - CodePipeline:DisableStageTransition
+            - CodePipeline:EnableStageTransition
+            - CodePipeline:RetryStageExecution
+            - CodePipeline:StartPipelineExecution
             Resource: !GetAtt CloudFormationRole.Arn
   ElasticBeanstalkRole:
     Properties:
@@ -163,11 +209,11 @@ Resources:
             - s3:GetObject
             - s3:GetObjectVersion
             - s3:GetBucketVersioning
-            Resource: "*"
+            Resource: '*'
             Effect: Allow
           - Action:
-            - s3:PutObject
-            Resource: 'arn:aws:s3:::nemac-drupal-artifacts-*'
+            - s3:*
+            Resource: ['arn:aws:s3:::nemac-artifacts-*','arn:aws:s3:::nemac-artifacts-*/*']
             Effect: Allow
           - Action:
             - elasticbeanstalk:*
@@ -183,12 +229,13 @@ Resources:
             - sqs:*
             - ecs:*
             - iam:PassRole
-            Resource: "*"
+            Resource: '*'
             Effect: Allow
           - Action:
             - lambda:InvokeFunction
             - lambda:ListFunctions
-            Resource: "*"
+            Resource: '*'
+            Resource: '*'
             Effect: Allow
           Version: '2012-10-17'
         PolicyName: 'codepipeline-role-policy'
@@ -196,22 +243,22 @@ Resources:
     Type: 'AWS::IAM::Role'
 Outputs:
   CloudFormationRole:
-    Description: CloudFormation Service Role
+    Description: 'CloudFormation Service Role Arn'
     Export:
       Name: 'CloudFormationRoleArn'
     Value: !GetAtt CloudFormationRole.Arn
   KMSKeyArn:
-    Description: KMS Key to be used by CloudFormation to securely pass credentials.
+    Description: 'KMS Key to be used by CloudFormation to securely pass credentials.'
     Export:
       Name: 'KMSKeyArn'
     Value: !Ref KMSKeyArn
   ElasticBeanstalkRole:
-    Description: ElasticBeanstalk Service Role
+    Description: 'ElasticBeanstalk Service Role Arn'
     Export:
       Name: 'ElasticBeanstalkRoleArn'
     Value: !GetAtt ElasticBeanstalkRole.Arn
   CodePipelineRole:
-    Description: 'CodePipeline role ARN'
+    Description: 'CodePipeline Role Arn'
     Export:
       Name: 'CodePipelineRoleArn'
     Value: !GetAtt CodePipelineRole.Arn

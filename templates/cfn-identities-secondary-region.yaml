@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Makes the cfn-identities stack outputs available to stacks in this region. Copy outputs from primary region's outputs to this stack's parameters.
+If cross region imports become available in the future this may be removed. Stack Name Format: cfn-identities-<region>"
+Parameters:
+  KMSKeyArn:
+    Type: String
+    Description: 'KMS Key to be used for encrypting database credentials.'
+  CloudFormationRoleArn:
+    Type: String
+  ElasticBeanstalkRoleArn:
+    Type: String
+  CodePipelineRoleArn:
+    Type: String
+Conditions:
+  FalseCondition: !Equals ['0','1']
+Resources:
+  #Cloudformation requires at least 1 resource be defined in this template.
+  DummyResource:
+    Properties:
+      CidrBlock: '172.17.0.0/16'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
+      Tags:
+      - Key: 'Name'
+        Value: !Ref 'AWS::StackName'
+    Type: 'AWS::EC2::VPC'
+    Condition: 'FalseCondition'
+Outputs:
+  CloudFormationRole:
+    Description: 'CloudFormation Service Role Arn'
+    Export:
+      Name: 'CloudFormationRoleArn'
+    Value: !Ref CloudFormationRoleArn
+  KMSKeyArn:
+    Description: 'KMS Key to be used by CloudFormation to securely pass credentials.'
+    Export:
+      Name: 'KMSKeyArn'
+    Value: !Ref KMSKeyArn
+  ElasticBeanstalkRole:
+    Description: 'ElasticBeanstalk Service Role Arn'
+    Export:
+      Name: 'ElasticBeanstalkRoleArn'
+    Value: !Ref ElasticBeanstalkRoleArn
+  CodePipelineRole:
+    Description: 'CodePipeline Role Arn'
+    Export:
+      Name: 'CodePipelineRoleArn'
+    Value: !Ref CodePipelineRoleArn
