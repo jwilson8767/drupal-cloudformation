@@ -59,8 +59,7 @@ Term|Definition
     - Note the database name as you will need it on step 10.
 5. Untar the project source into a directory using `tar xzf sitename.tgz`.
 6. Move the project `project/html/` directory's contents to the root of your project directory. Delete the project/html folder.
-7. Pull the drupal project template files into the project directory using `git pull https://github.com/jwilson8767/nemac-drupal-template.git
-`. This will overwrite some files and include the files that help configure the Elastic Beanstalk environment. Additionally, this adds the `s3fs` Drupal module (and its dependencies), which is what offloads static assets to S3 and allows the webserver to be stateless.
+7. Pull the drupal project template files into the project directory using `git pull https://github.com/jwilson8767/nemac-drupal-template.git`. This will overwrite some files and include the files that help configure the Elastic Beanstalk environment. Additionally, this adds the `s3fs` Drupal module (and its dependencies), which is what offloads static assets to S3 and allows the webserver to be stateless.
 8. Commit all the files in the project directory to a new branch, push that branch to the project's GitHub repository.
 9. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
 10. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a> Enter your github information as needed (You should generate a personal access token with `repo` access). Make sure to enter the correct branch. If this environment will go into production at any poind check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted. The environment will take a few minutes to spin up and deploy, grab some coffee.
@@ -73,12 +72,10 @@ Term|Definition
 2. Create your new project:
     - Create a GitHub repository for your project, then clone it into a local directory.
     <!--  TODO Update this link when the template project files have a repository -->
-    - Copy the template project files into your project directory using `git archive --format=tar --remote=<repository URL> HEAD | tar xf -`
+    - Pull the drupal project template files into the project directory using `git pull https://github.com/jwilson8767/nemac-drupal-template.git`
     - Commit your code to the github repository using `git add --all && commit -m "template" && push origin master`
 3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
-4.
 5. When the environment stack creation completes, copy the EB Domain Name from the Outputs panel to your address bar, then add `/user` to login to your drupal environment.
-6.
 
 ### <span id="clone-production"></span>Cloning the production environment to develop in a safe environment.
 Do this if you have a branch you want to experiment with, test new updates to Drupal, or just develop in your own space without disrupting the production environment. Later you can either commit your changes to the master branch of the project's github repository(at which point the changes will be automatically deployed to the production environment) or [assign your new environment as the production environment for the Application stack](#replace-production-environment).
