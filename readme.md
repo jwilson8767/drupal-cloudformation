@@ -63,7 +63,15 @@ This requires you to be in the `cfn-admins` IAM group.
 7. Pull the drupal project template files into the project directory using `git pull -X theirs https://github.com/jwilson8767/nemac-drupal-template.git`. This will overwrite some files and include the files that help configure the Elastic Beanstalk environment. Additionally, this adds the `s3fs` Drupal module (and its dependencies), which is what offloads static assets to S3 and allows the webserver to be stateless.
 8. Commit all the files in the project directory to a new branch, push that branch to the project's GitHub repository.
 9. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>  Ensure you set the IAM role to `cloudformation-role`.
-10. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a>  Enter your github information as needed (You should generate a personal access token with `repo` access). Make sure to enter the correct branch. If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  Ensure you set the IAM role to `cloudformation-role`. The environment will take a few minutes to spin up and deploy, grab some coffee.
+10. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a>
+    - Enter your github information as needed.
+    - Make sure to enter the correct branch.
+    - If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.
+    - You should generate a [personal access](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) token with `repo` access.
+    - Ensure you set the IAM role to
+     `cloudformation-role`.
+   - Check I acknowledge that AWS cloudformation might create IAM resources.  (This is at the bottom of the confirmation page)
+   - The environment will take a few minutes to spin up and deploy, grab some coffee.
 11. Your environment should not be ready and functional. Connect to it using the link given in the output of the environment stack (or the Elastic Beanstalk console). Note that https is not yet implemented and that this section does not cover using Route53 to direct traffic to your environment.
 
 ### <span id="new-project"></span>Starting a new project
@@ -78,7 +86,14 @@ This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
     - Pull the drupal project template files into the project directory using `git remote add -f nemac-drupal-template https://github.com/jwilson8767/nemac-drupal-template.git && git reset --hard nemac-drupal-template/master` (If the template changes in the future you can use `git pull nemac-drupal-template master` to update your project)
     - Commit your code to the github repository using `git add . --all && git commit -m "template" && git push origin master`
 3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a> Ensure you set the IAM role to `cloudformation-role`.
-4. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a> Enter your github information as needed (You should generate a personal access token with `repo` access). Make sure to enter the correct branch. If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  Ensure you set the IAM role to `cloudformation-role`. The environment will take a few minutes to spin up and deploy, grab some coffee.
+4. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a>     - Enter your github information as needed.
+    - You should generate a [personal access](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) token with `repo` access.
+    - Make sure to enter the correct branch.
+    - If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.
+    - Ensure you set the IAM role to
+     `cloudformation-role`.
+   - check I acknowledge that AWS cloudformation might create IAM resources. (This is at the bottom of the conformation page)
+   - The environment will take a few minutes to spin up and deploy, grab some coffee.
 5. When the environment stack creation completes, copy the EB Domain Name from the Outputs panel to your address bar, then add `/user` to login to your drupal environment.
 
 ### <span id="delete-stack"></span>Deleting stacks
