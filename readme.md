@@ -83,12 +83,6 @@ This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
 2. Create your new project:
     - Create a GitHub repository for your project, then clone it into a local directory.
     - Download Drupal into the project directory using `curl https://ftp.drupal.org/files/projects/drupal-7.54.tar.gz | tar xz --strip-components=1`
-    - push it to GitHub
-    ```bash
-      git add .
-      git commit -m 'add drupal'
-      git push origin master
-    ```
     - Pull the drupal project template files into the project directory using `git remote add -f nemac-drupal-template https://github.com/jwilson8767/nemac-drupal-template.git && git reset --hard nemac-drupal-template/master` (If the template changes in the future you can use `git pull nemac-drupal-template master` to update your project)
     - Commit your code to the github repository using
     ```bash
