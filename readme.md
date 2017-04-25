@@ -67,7 +67,7 @@ This requires you to be in the `cfn-admins` IAM group.
     - Enter your github information as needed.
     - You should generate a [personal access](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) token with `repo` access.
     - Make sure to enter the correct branch.
-    - If this environment will go into production at any poind check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  
+    - If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  
     - Ensure you set the IAM role to
      `cloudformation-role`.
    - check I acknowledge that AWS cloudformation might create IAM resources.  (This is at the bottom of the conformation page)
@@ -89,7 +89,7 @@ This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
 4. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a>     - Enter your github information as needed.
     - You should generate a [personal access](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) token with `repo` access.
     - Make sure to enter the correct branch.
-    - If this environment will go into production at any poind check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  
+    - If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.  
     - Ensure you set the IAM role to
      `cloudformation-role`.
    - check I acknowledge that AWS cloudformation might create IAM resources. (This is at the bottom of the conformation page)
