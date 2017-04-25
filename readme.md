@@ -87,14 +87,14 @@ This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
     ```bash
       git add .
       git commit -m 'add drupal'
-      push origin master`
+      git push origin master
     ```
     - Pull the drupal project template files into the project directory using `git remote add -f nemac-drupal-template https://github.com/jwilson8767/nemac-drupal-template.git && git reset --hard nemac-drupal-template/master` (If the template changes in the future you can use `git pull nemac-drupal-template master` to update your project)
     - Commit your code to the github repository using
     ```bash
       git add . --all
       git commit -m 'template'
-      push origin master`
+      git push origin master
     ```
 3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
     - Ensure you set the IAM role to `cloudformation-role`.
