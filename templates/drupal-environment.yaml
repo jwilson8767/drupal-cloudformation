@@ -1,14 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'A Drupal Environment'
-Metadata:
-  AWS::CloudFormation::Interface:
-    ParameterGroups:
-    - Label: {default: General Configuration}
-      Parameters: [ProjectStack, MySQLInstanceStack, AssetStoreStack]
-    - Label: {default: Deployment Configuration}
-      Parameters: [GitRepository, GitBranch, KeyPair]
-    - Label: {default: Advanced Configuration}
-      Parameters: [InstanceType, SolutionStackName]
 Parameters:
   DatabaseName: {Description: Leave blank to use this stack's name. If a database
       with this name already exists it will be used instead of creating a new database.,
@@ -20,11 +11,11 @@ Parameters:
     MinLength: 1
     Type: String
   GitBranch: {Description: The Git branch this environment should pull from.,
-    Type: String, Default: ''}
+    Type: String, Default: '', MinLength: 1}
   GitRepository: {Description: The Github Repository to pull from. For example 'nemac/cohesivefire.nemac.org',
-    Type: String, Default: ''}
+    Type: String, Default: '', MinLength: 1}
   GitOAuthToken:  {Description: The Github Oauth Token to use to access this repository',
-    Type: String, NoEcho: true, Default: ''}
+    Type: String, NoEcho: true, Default: '', MinLength: 1}
   InstanceType:
     AllowedValues: [t2.nano, t2.micro, t2.small, t2.medium]
     Default: t2.nano
