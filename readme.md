@@ -80,6 +80,7 @@ This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
 1. [Install Git](https://git-scm.com/downloads) on the computer you will be developing with.
 2. Create your new project:
     - Fork the [Drupal Project Template Github Repository](https://github.com/jwilson8767/nemac-drupal-template/)
+    - Rename the repository to reflect the site or project
     - Clone your fork to your local machine using the instructions provided by Github. (optional if you do not need to make any code/theme changes at this time.)
 3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
     - Ensure you set the IAM role to `cloudformation-role`.
