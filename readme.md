@@ -77,30 +77,23 @@ This requires you to be in the `cfn-admins` IAM group.
 ### <span id="new-project"></span>Starting a new project
 This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
 
-1. Get your project ready:
-    - [Install Git](https://git-scm.com/downloads) on the computer you will be developing with.
-    - (optional) [Install the AWS CLI](https://aws.amazon.com/cli/), [generate your access key](), and use `aws configure` to enter your access key to make it easier to manage stacks later on.
+1. [Install Git](https://git-scm.com/downloads) on the computer you will be developing with.
 2. Create your new project:
-    - Create a GitHub repository for your project, then clone it into a local directory.
-    - Download Drupal into the project directory using `curl https://ftp.drupal.org/files/projects/drupal-7.54.tar.gz | tar xz --strip-components=1`
-    - Pull the drupal project template files into the project directory using `git remote add -f nemac-drupal-template https://github.com/jwilson8767/nemac-drupal-template.git && git reset --hard nemac-drupal-template/master` (If the template changes in the future you can use `git pull nemac-drupal-template master` to update your project)
-    - Commit your code to the github repository using
-    ```bash
-      git add . --all
-      git commit -m 'template'
-      git push origin master
-    ```
+    - Fork the [Drupal Project Template Github Repository](https://github.com/jwilson8767/nemac-drupal-template/)
+    - Clone your fork to your local machine using the instructions provided by Github. (optional if you do not need to make any code/theme changes at this time.)
 3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
     - Ensure you set the IAM role to `cloudformation-role`.
-4. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a>     - Enter your github information as needed.
+4. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com-1&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml">Click here to create a new Drupal Environment stack.</a>
+    - Enter your github information as needed.
     - You should generate a [personal access](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) token with `repo` access.
-    - Make sure to enter the correct branch.
+    - Ensure you enter the correct branch (for new projects this will be master).
     - If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.
-    - Ensure you set the IAM role to
-     `cloudformation-role`.
-   - check I acknowledge that AWS cloudformation might create IAM resources. (This is at the bottom of the conformation page)
-   - The environment will take a few minutes to spin up and deploy, grab some coffee.
-5. When the environment stack creation completes, copy the EB Domain Name from the Outputs panel to your address bar, then add `/user` to login to your drupal environment.
+    - Ensure you set the IAM role to `cloudformation-role`.
+    - Check `I acknowledge that AWS cloudformation might create IAM resources` at the bottom of the conformation page.
+    - The environment will take a few minutes to provision and deploy, grab some coffee.
+5. When the environment stack creation completes, copy the EB Domain Name from the Outputs panel to your address bar, then add `/install.php` to begin the Drupal first-time setup. You will be asked to pick an email address the server should send from (usually something like `no-reply@someproject.com`) and to setup an admin account for yourself.
+ 6. All done! Your environment is now fully deployed.
+ <!-- TODO tie back to development workflow once we have designed it. -->
 
 ### <span id="delete-stack"></span>Deleting stacks
 Deleting a stack is usually super easy: Just use the `Delete Stack` button in CloudFormation. However, first you must delete dependant stacks. For example, before you can delete an Application stack, you have to delete all of the Environment stacks that depend on it. If a deletion fails, you can try using `aws cloudformation delete-stack --stack-name "<Stack Name>" --retain-resources`, but then you will have to manually clean up all of the resources left behind.
