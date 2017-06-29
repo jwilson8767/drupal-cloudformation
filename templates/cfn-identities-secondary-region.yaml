@@ -14,8 +14,10 @@ Parameters:
 Conditions:
   FalseCondition: !Equals ['0','1']
 Resources:
-  #Cloudformation requires at least 1 resource be defined in this template.
+  #Cloudformation requires at least 1 resource be defined in the template.
   DummyResource:
+    Type: AWS::EC2::VPC
+    Condition: 'FalseCondition'
     Properties:
       CidrBlock: '172.17.0.0/16'
       EnableDnsHostnames: 'true'
@@ -23,19 +25,17 @@ Resources:
       Tags:
       - Key: 'Name'
         Value: !Ref 'AWS::StackName'
-    Type: 'AWS::EC2::VPC'
-    Condition: 'FalseCondition'
 Outputs:
+  KMSKeyArn:
+    Description: 'KMS Key to be used by CloudFormation to secure secrets.'
+    Export:
+      Name: 'KMSKeyArn'
+    Value: !Ref KMSKeyArn
   CloudFormationRole:
     Description: 'CloudFormation Service Role Arn'
     Export:
       Name: 'CloudFormationRoleArn'
     Value: !Ref CloudFormationRoleArn
-  KMSKeyArn:
-    Description: 'KMS Key to be used by CloudFormation to securely pass credentials.'
-    Export:
-      Name: 'KMSKeyArn'
-    Value: !Ref KMSKeyArn
   ElasticBeanstalkRole:
     Description: 'ElasticBeanstalk Service Role Arn'
     Export:

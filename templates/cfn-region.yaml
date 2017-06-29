@@ -1,26 +1,39 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Provisions IAM roles and network resources needed to provision other stacks in this Region.'
 Parameters:
+  ExistingArtifactBucket:
+    Description: 'If an artifact bucket already exists, enter its name here. (Must be in this region)'
+    Type: String
   ExistingAssetBucket:
-    Description: The database admin account password
+    Description: 'If an asset bucket already exists, enter its name here. (Must be in this region)'
+    Type: String
+  ExistingSecretsBucket:
+    Description: 'If a secrets bucket already exists, enter its name here. (Does not need to be in this region)'
     Type: String
 Conditions:
+  NotHasExistingArtifactBucket: !Equals [!Ref 'ExistingArtifactBucket', '']
   NotHasExistingAssetBucket: !Equals [!Ref 'ExistingAssetBucket', '']
+  NotHasExistingSecretsBucket: !Equals [!Ref 'ExistingSecretsBucket', '']
 Resources:
   # The Artifact store bucket is used for artifacts created by CodePipeline and Elastic Beanstalk when pulling down/testing git repos.
   ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Condition: NotHasExistingArtifactBucket
+    DeletionPolicy: 'Delete'
     Properties:
       BucketName: !Sub 'nemac-artifacts-${AWS::Region}'
-    Type: 'AWS::S3::Bucket'
   # The Asset Bucket is used for static assets that should be publicly accessible.
   AssetBucket:
+    Type: AWS::S3::Bucket
+    Condition: NotHasExistingAssetBucket
+    DeletionPolicy: 'Retain'
     Properties:
       BucketName: !Sub 'nemac-assets-${AWS::Region}'
-    Type: 'AWS::S3::Bucket'
-    Condition: NotHasExistingAssetBucket
   AssetBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: AssetBucket
+    Condition: NotHasExistingAssetBucket
     DeletionPolicy: 'Retain'
-    DependsOn: 'AssetBucket'
     Properties:
       Bucket: !Sub 'nemac-assets-${AWS::Region}'
       PolicyDocument:
@@ -29,8 +42,61 @@ Resources:
           Effect: 'Allow'
           Principal: '*'
           Resource: !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}/*/public/*'
-    Type: 'AWS::S3::BucketPolicy'
-    Condition: NotHasExistingAssetBucket
+  SecretsBucket:
+    Type: AWS::S3::Bucket
+    Condition: NotHasExistingSecretsBucket
+    DeletionPolicy: 'Retain'
+    Properties:
+      BucketName: !Sub 'nemac-secrets-${AWS::Region}'
+  SecretsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: SecretsBucket
+    Condition: NotHasExistingSecretsBucket
+    DeletionPolicy: 'Retain'
+    Properties:
+      Bucket: !Sub 'nemac-secrets-${AWS::Region}'
+      PolicyDocument:
+        Statement:
+          - "Effect":"Deny"
+            "Principal":"*"
+            "Action":"s3:*"
+            "Resource":["arn:aws:s3:::nemac-secrets"
+            "arn:aws:s3:::nemac-secrets/*"]
+            "Condition":{"StringNotLike":{"aws:userId":["AROAJ6WATZNOFV7HFZ5WA:*"
+            "AROAJTCC6ELV5J4SCDZBI:*"
+            "AIDAIC5NTOUZ76EAYKHXC"]}}}
+          - "Sid":"AllowListDirectory-live-nemac-org"
+            "Effect":"Allow"
+            "Principal":{"AWS":"arn:aws:iam::479394595410:role/live-nemac-org"}
+            "Action":"s3:ListBucket"
+            "Resource":["arn:aws:s3:::nemac-secrets"
+            "arn:aws:s3:::nemac-secrets/*"]
+            "Condition":{"StringLike":{"s3:prefix":"live-nemac-org/*"}}
+          - "Sid":"AllowGetPut-live-nemac-org"
+            "Effect": "Allow"
+            "Principal":{"AWS":"arn:aws:iam::479394595410:role/live-nemac-org"}
+            "Action":
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+              - "s3:PutObject"
+              - "s3:DeleteObject"
+            "Resource":"arn:aws:s3:::nemac-secrets/live-nemac-org/*"
+          - "Sid":"AllowListDirectory-staging-nemac-org"
+            "Effect":"Allow"
+            "Principal":{"AWS":"arn:aws:iam::479394595410:role/staging-nemac-org"}
+            "Action":"s3:ListBucket"
+            "Resource":["arn:aws:s3:::nemac-secrets",
+            "arn:aws:s3:::nemac-secrets/*"]
+            "Condition": {"StringLike":{"s3:prefix":"staging-nemac-org/*"}}
+          - "Sid":"AllowGetPut-staging-nemac-org"
+            "Effect":"Allow"
+            "Principal": {"AWS":"arn:aws:iam::479394595410:role/staging-nemac-org"}
+            "Action":
+            - "s3:GetObject"
+            - "s3:GetObjectVersion"
+            - "s3:PutObject"
+            - "s3:DeleteObject"
+            "Resource":"arn:aws:s3:::nemac-secrets/staging-nemac-org/*"
   # VPC for all CloudFormation resources in this region.
   VPC:
     Properties:
@@ -39,83 +105,75 @@ Resources:
       EnableDnsSupport: 'true'
       Tags:
       - Key: 'Name'
-        Value: !Ref 'AWS::StackName'
-    Type: 'AWS::EC2::VPC'
+        Value: !Ref AWS::StackName
+    Type: AWS::EC2::VPC
   # The InternetGateway allows egress from the VPC
   InternetGateway:
-      DependsOn: 'VPC'
-      Properties: {}
-      Type: 'AWS::EC2::InternetGateway'
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties: {}
   InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
     DependsOn: ['InternetGateway', 'VPC']
     Properties:
-      InternetGatewayId: !Ref 'InternetGateway'
-      VpcId: !Ref 'VPC'
-    Type: 'AWS::EC2::VPCGatewayAttachment'
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
   InternetGatewayRouteTable:
-    DependsOn: 'VPC'
+    Type: AWS::EC2::RouteTable
+    DependsOn: VPC
     Properties:
-      VpcId: !Ref 'VPC'
+      VpcId: !Ref VPC
       Tags:
       - Key: 'Application'
-        Value: !Ref 'AWS::StackId'
+        Value: !Ref AWS::StackId
       - Key: Network
         Value: Public
-    Type: 'AWS::EC2::RouteTable'
   InternetGatewayRouteTableAssociation:
+    Type: AWS::EC2::Route
     DependsOn: ['InternetGatewayAttachment','InternetGatewayRouteTable']
     Properties:
       DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref 'InternetGateway'
-      RouteTableId: !Ref 'InternetGatewayRouteTable'
-    Type: 'AWS::EC2::Route'
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref InternetGatewayRouteTable
   # One subnet per Availability Zone is sufficient for drupal web servers.
   SubnetA:
-    DependsOn: 'VPC'
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
     Properties:
       AvailabilityZone: !Sub '${AWS::Region}a'
       CidrBlock: '172.17.0.0/22'
       MapPublicIpOnLaunch: 'false'
-      VpcId: !Ref 'VPC'
-    Type: 'AWS::EC2::Subnet'
+      VpcId: !Ref VPC
   SubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     DependsOn: ['InternetGateway', 'SubnetA']
     Properties:
-      RouteTableId: !Ref 'InternetGatewayRouteTable'
-      SubnetId: !Ref 'SubnetA'
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+      RouteTableId: !Ref InternetGatewayRouteTable
+      SubnetId: !Ref SubnetA
   SubnetB:
-    DependsOn: 'VPC'
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
     Properties:
       AvailabilityZone: !Sub '${AWS::Region}b'
       CidrBlock: '172.17.4.0/22'
       MapPublicIpOnLaunch: 'false'
-      VpcId: !Ref 'VPC'
-    Type: 'AWS::EC2::Subnet'
+      VpcId: !Ref VPC
   SubnetBRouteTableAssociation:
     DependsOn: ['InternetGateway', 'SubnetB']
     Properties:
-      RouteTableId: !Ref 'InternetGatewayRouteTable'
-      SubnetId: !Ref 'SubnetB'
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+      RouteTableId: !Ref InternetGatewayRouteTable
+      SubnetId: !Ref SubnetB
+    Type: AWS::EC2::SubnetRouteTableAssociation
   # Defines Security Groups RDS can create endpoints in.
   RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
     DependsOn: ['SubnetA', 'SubnetB']
     Properties:
       DBSubnetGroupDescription: 'default'
       SubnetIds:
-      - !Ref 'SubnetA'
-      - !Ref 'SubnetB'
+        - !Ref SubnetA
+        - !Ref SubnetB
       Tags: []
-    Type: 'AWS::RDS::DBSubnetGroup'
-  DevWhitelistSecurityGroup:
-    Properties:
-      GroupDescription: 'Ingress to EC2/RDS instances in this region from WAN IPs for development purposes.'
-      Tags:
-      - Key: Name
-        Value: !Sub 'dev-whitelist-${AWS::Region}'
-      VpcId: !Ref 'VPC'
-    Type: AWS::EC2::SecurityGroup
 Outputs:
   ArtifactStore:
     Description: 'S3 Bucket name for artifacts'
@@ -126,7 +184,7 @@ Outputs:
     Description: 'S3 Bucket name'
     Export:
       Name: !Sub '${AWS::StackName}-AssetStore'
-    Value: !If ['NotHasExistingAssetBucket',!Sub 'nemac-assets-${AWS::Region}',!Ref 'ExistingAssetBucket']
+    Value: !If ['NotHasExistingAssetBucket',!Sub 'nemac-assets-${AWS::Region}',!Ref ExistingAssetBucket]
   AssetStoreUrl:
     Description: 'Url to the Asset Store S3 Bucket'
     Export:
@@ -136,24 +194,19 @@ Outputs:
     Description: 'VpcId'
     Export:
       Name: !Sub '${AWS::StackName}-VpcId'
-    Value: !Ref 'VPC'
+    Value: !Ref VPC
   RDSSubnetGroup:
     Description: 'RDS Subnet Group Id'
     Export:
       Name: !Sub '${AWS::StackName}-RDSSubnetGroup'
-    Value: !Ref 'RDSSubnetGroup'
+    Value: !Ref RDSSubnetGroup
   SubnetA:
     Description: 'Subnet ID of Subnet A'
     Export:
       Name: !Sub '${AWS::StackName}-SubnetA'
-    Value: !Ref 'SubnetA'
+    Value: !Ref SubnetA
   SubnetB:
     Description: 'Subnet ID of Subnet B'
     Export:
       Name: !Sub '${AWS::StackName}-SubnetB'
-    Value: !Ref 'SubnetB'
-  DevWhitelistSecurityGroup:
-    Description: 'Developer IP Whitelist Security Group Id'
-    Export:
-      Name: !Sub '${AWS::StackName}-DevWhitelistSecurityGroup'
-    Value: !GetAtt 'DevWhitelistSecurityGroup.GroupId'
+    Value: !Ref SubnetB

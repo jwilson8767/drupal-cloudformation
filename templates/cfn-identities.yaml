@@ -1,12 +1,25 @@
+## Sets up basic IAM Roles and Groups and a KMS key for this AWS Account.
+## The very first stack to be created on any AWS Account.
+## Currently, there can only be one cfn-identities stack per AWS account.
+## Don't touch this unless you know what you're doing as every other cfn stack depends on this one.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Creates CloudFormation IAM roles and groups for this AWS Account. There should only be one of this type of stack per account. StackName: cfn-identities'
 Parameters:
   KMSKeyArn:
     Type: String
     Description: 'KMS Key to be used for encrypting database credentials.'
+  AdminUsernames:
+    Type: String
+    Description: 'Comma-seperated list of admin usernames (including yourself). No spaces.'
+  DeveloperUsernames:
+    Type: String
+    Description: 'Comma-seperated list of developer usernames. No Spaces.'
+Conditions:
+  HasAdminUsernames: !Not [!Equals [!Ref AdminUsernames, '']]
+  HasDeveloperUsernames: !Not [!Equals [!Ref DeveloperUsernames, '']]
 Resources:
   CloudFormationRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       RoleName: 'cloudformation-role'
       AssumeRolePolicyDocument:
@@ -91,6 +104,13 @@ Resources:
             Action:
             - iam:PassRole
             Resource: !GetAtt 'CloudFormationRole.Arn'
+  AdminGroupUsers:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: cfn-admins
+      Users: !Split [',', !Ref AdminUsernames]
+    Condition: HasAdminUsernames
+    DependsOn: AdminGroup
   DeveloperGroup:
     Type: AWS::IAM::Group
     Properties:
@@ -179,6 +199,13 @@ Resources:
             - CodePipeline:RetryStageExecution
             - CodePipeline:StartPipelineExecution
             Resource: !GetAtt CloudFormationRole.Arn
+  DeveloperGroupUsers:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: 'cfn-developers'
+      Users: !Split [',', !Ref DeveloperUsernames]
+    Condition: HasDeveloperUsernames
+    DependsOn: DeveloperGroup
   ElasticBeanstalkRole:
     Properties:
       AssumeRolePolicyDocument:
@@ -191,7 +218,7 @@ Resources:
       Path: '/'
       ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService']
       RoleName: 'elasticbeanstalk-role'
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
   CodePipelineRole:
     Properties:
       AssumeRolePolicyDocument:
@@ -240,18 +267,18 @@ Resources:
           Version: '2012-10-17'
         PolicyName: 'codepipeline-role-policy'
       RoleName: 'codepipeline-role'
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
 Outputs:
+  KMSKeyArn:
+    Description: 'KMS Key to be used by CloudFormation to secure secrets.'
+    Export:
+      Name: 'KMSKeyArn'
+    Value: !Ref KMSKeyArn
   CloudFormationRole:
     Description: 'CloudFormation Service Role Arn'
     Export:
       Name: 'CloudFormationRoleArn'
     Value: !GetAtt CloudFormationRole.Arn
-  KMSKeyArn:
-    Description: 'KMS Key to be used by CloudFormation to securely pass credentials.'
-    Export:
-      Name: 'KMSKeyArn'
-    Value: !Ref KMSKeyArn
   ElasticBeanstalkRole:
     Description: 'ElasticBeanstalk Service Role Arn'
     Export:
