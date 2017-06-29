@@ -56,47 +56,53 @@ Resources:
     Properties:
       Bucket: !Sub 'nemac-secrets-${AWS::Region}'
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
-          - "Effect":"Deny"
-            "Principal":"*"
-            "Action":"s3:*"
-            "Resource":["arn:aws:s3:::nemac-secrets"
-            "arn:aws:s3:::nemac-secrets/*"]
-            "Condition":{"StringNotLike":{"aws:userId":["AROAJ6WATZNOFV7HFZ5WA:*"
-            "AROAJTCC6ELV5J4SCDZBI:*"
-            "AIDAIC5NTOUZ76EAYKHXC"]}}}
-          - "Sid":"AllowListDirectory-live-nemac-org"
-            "Effect":"Allow"
-            "Principal":{"AWS":"arn:aws:iam::479394595410:role/live-nemac-org"}
-            "Action":"s3:ListBucket"
-            "Resource":["arn:aws:s3:::nemac-secrets"
-            "arn:aws:s3:::nemac-secrets/*"]
-            "Condition":{"StringLike":{"s3:prefix":"live-nemac-org/*"}}
-          - "Sid":"AllowGetPut-live-nemac-org"
-            "Effect": "Allow"
-            "Principal":{"AWS":"arn:aws:iam::479394595410:role/live-nemac-org"}
-            "Action":
+          - Effect: "Deny"
+            Principal: "*"
+            Action: "s3:*"
+            Resource: 
+              - "arn:aws:s3:::nemac-secrets"
+              - "arn:aws:s3:::nemac-secrets/*"
+            Condition: 
+              StringNotLike: 
+                aws:userId: 
+                  - "AROAJ6WATZNOFV7HFZ5WA:*"
+                  - "AROAJTCC6ELV5J4SCDZBI:*"
+                  - "AIDAIC5NTOUZ76EAYKHXC"
+          - Sid: "AllowListDirectory-live-nemac-org"
+            Effect: "Allow"
+            Principal: {AWS: "arn:aws:iam::479394595410:role/live-nemac-org"}
+            Action: "s3:ListBucket"
+            Resource:
+              - "arn:aws:s3:::nemac-secrets"
+              - "arn:aws:s3:::nemac-secrets/*"
+            Condition: { StringLike: { "s3:prefix": "live-nemac-org/*"}}
+          - Sid: "AllowGetPut-live-nemac-org"
+            Effect:  "Allow"
+            Principal: {AWS: "arn:aws:iam::479394595410:role/live-nemac-org"}
+            Action: 
               - "s3:GetObject"
               - "s3:GetObjectVersion"
               - "s3:PutObject"
               - "s3:DeleteObject"
-            "Resource":"arn:aws:s3:::nemac-secrets/live-nemac-org/*"
-          - "Sid":"AllowListDirectory-staging-nemac-org"
-            "Effect":"Allow"
-            "Principal":{"AWS":"arn:aws:iam::479394595410:role/staging-nemac-org"}
-            "Action":"s3:ListBucket"
-            "Resource":["arn:aws:s3:::nemac-secrets",
+            Resource: "arn:aws:s3:::nemac-secrets/live-nemac-org/*"
+          - Sid: "AllowListDirectory-staging-nemac-org"
+            Effect: "Allow"
+            Principal: {AWS: "arn:aws:iam::479394595410:role/staging-nemac-org"}
+            Action: "s3:ListBucket"
+            Resource: ["arn:aws:s3:::nemac-secrets",
             "arn:aws:s3:::nemac-secrets/*"]
-            "Condition": {"StringLike":{"s3:prefix":"staging-nemac-org/*"}}
-          - "Sid":"AllowGetPut-staging-nemac-org"
-            "Effect":"Allow"
-            "Principal": {"AWS":"arn:aws:iam::479394595410:role/staging-nemac-org"}
-            "Action":
+            Condition:  {StringLike: {"s3:prefix": "staging-nemac-org/*"}}
+          - Sid: "AllowGetPut-staging-nemac-org"
+            Effect: "Allow"
+            Principal:  {AWS: "arn:aws:iam::479394595410:role/staging-nemac-org"}
+            Action: 
             - "s3:GetObject"
             - "s3:GetObjectVersion"
             - "s3:PutObject"
             - "s3:DeleteObject"
-            "Resource":"arn:aws:s3:::nemac-secrets/staging-nemac-org/*"
+            Resource: "arn:aws:s3:::nemac-secrets/staging-nemac-org/*"
   # VPC for all CloudFormation resources in this region.
   VPC:
     Properties:

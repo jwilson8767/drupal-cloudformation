@@ -15,12 +15,10 @@ Parameters:
   GitBranch:
     Type: String
     Description: 'The Git branch this environment should pull from.'
-    Default: ''
     MinLength: 1
   GitRepository:
     Type: String
     Description: "The Github Repository to pull from. For example 'nemac/cohesivefire.nemac.org'"
-    Default: ''
     MinLength: 1
   GitOAuthToken:
     Type: String
@@ -35,7 +33,7 @@ Parameters:
   MySQLInstanceStack:
     Type: String
     AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$'
-    Default: drupal-mysql56
+    Default: 'drupal-mysql56'
     Description: 'The MySQL Instance stack name to use for this environment'
     MaxLength: 255
     MinLength: 1
@@ -58,134 +56,134 @@ Resources:
       ApplicationName: !Ref 'ProjectStack'
       Description: ''
       OptionSettings:
-      - Namespace: aws:elasticbeanstalk:environment
-        OptionName: EnvironmentType
-        Value: SingleInstance
-      - Namespace: aws:autoscaling:launchconfiguration
-        OptionName: IamInstanceProfile
-        Value: !GetAtt EC2InstanceProfile.Arn
-      - Namespace: aws:autoscaling:launchconfiguration
-        OptionName: InstanceType
-        Value: !Ref 'InstanceType'
-      - Namespace: aws:autoscaling:launchconfiguration
-        OptionName: SecurityGroups
-        Value: !Join [',', [!Ref 'EC2InstanceSecurityGroup', !ImportValue [ !Sub '${MySQLInstanceStack}-EC2InstanceSecurityGroup']]]
-      - Namespace: aws:ec2:vpc
-        OptionName: AssociatePublicIpAddress
-        Value: true
-        ResourceName: AWSEBAutoScalingLaunchConfiguration
-      - Namespace: 'aws:autoscaling:launchconfiguration'
-        OptionName: 'EC2KeyName'
-        Value: 'cfn-admin'
-        ResourceName: 'AWSEBAutoScalingLaunchConfiguration'
-      - Namespace: aws:cloudformation:template:parameter
-        OptionName: InstancePort
-        Value: '80'
-      - Namespace: aws:ec2:vpc
-        OptionName: Subnets
-        ResourceName: AWSEBAutoScalingGroup
-        Value: !Join [',', [!ImportValue 'cfn-region-SubnetA',!ImportValue 'cfn-region-SubnetB']]
-      - Namespace: aws:ec2:vpc
-        OptionName: VPCId
-        ResourceName: AWSEBSecurityGroup
-        Value: !ImportValue 'cfn-region-VpcId'
-      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
-        OptionName: DeleteOnTerminate
-        Value: 'true'
-      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
-        OptionName: RetentionInDays
-        Value: '7'
-      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
-        OptionName: StreamLogs
-        Value: 'false'
-      - Namespace: aws:elasticbeanstalk:command
-        OptionName: BatchSize
-        Value: '100'
-      - Namespace: aws:elasticbeanstalk:command
-        OptionName: BatchSizeType
-        Value: Percentage
-      - Namespace: aws:elasticbeanstalk:command
-        OptionName: IgnoreHealthCheck
-        Value: 'false'
-      - Namespace: aws:elasticbeanstalk:command
-        OptionName: Timeout
-        Value: '600'
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: allow_url_fopen
-        Value: 'On'
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: composer_options
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: display_errors
-        Value: 'Off'
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: document_root
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: max_execution_time
-        Value: '60'
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: memory_limit
-        Value: 256M
-      - Namespace: aws:elasticbeanstalk:container:php:phpini
-        OptionName: zlib.output_compression
-        Value: 'Off'
-      - Namespace: aws:elasticbeanstalk:control
-        OptionName: DefaultSSHPort
-        Value: '22'
-      - Namespace: aws:elasticbeanstalk:control
-        OptionName: LaunchTimeout
-        Value: '0'
-      - Namespace: aws:elasticbeanstalk:control
-        OptionName: LaunchType
-        Value: Migration
-      - Namespace: aws:elasticbeanstalk:control
-        OptionName: RollbackLaunchOnFailure
-        Value: 'false'
-      - Namespace: aws:elasticbeanstalk:environment
-        OptionName: ServiceRole
-        Value: elasticbeanstalk-role
-      - Namespace: aws:elasticbeanstalk:healthreporting:system
-        OptionName: SystemType
-        Value: enhanced
-      - Namespace: aws:elasticbeanstalk:healthreporting:system
-        OptionName: HealthCheckSuccessThreshold
-        Value: Ok
-      - Namespace: aws:elasticbeanstalk:monitoring
-        OptionName: Automatically Terminate Unhealthy Instances
-        Value: 'true'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'APPLICATION'
-        Value: !Ref 'ProjectStack'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'ASSET_STORE'
-        Value: !ImportValue 'cfn-region-AssetStore'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'REGION'
-        Value: !Ref 'AWS::Region'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'AWS_DEFAULT_REGION'
-        Value: !Ref 'AWS::Region'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'ENABLE_XDEBUG'
-        Value: '1'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'COMPOSER_HOME'
-        Value: '/tmp/composer/'
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'DRUPAL_DB_HOSTNAME'
-        Value: !ImportValue [!Sub '${MySQLInstanceStack}-Hostname']
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'DRUPAL_DB_PORT'
-        Value: !ImportValue [ !Sub '${MySQLInstanceStack}-Port']
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'DRUPAL_DB_USERNAME'
-        Value: !GetAtt MySQLDatabase.Username
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'DRUPAL_DB_PASSWORD'
-        Value: !GetAtt MySQLDatabase.EncryptedPassword
-      - Namespace: aws:elasticbeanstalk:application:environment
-        OptionName: 'DRUPAL_DB_NAME'
-        Value: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: EnvironmentType
+          Value: SingleInstance
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: IamInstanceProfile
+          Value: !GetAtt EC2InstanceProfile.Arn
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: InstanceType
+          Value: !Ref 'InstanceType'
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: SecurityGroups
+          Value: !Join [',', [!Ref 'EC2InstanceSecurityGroup', {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-EC2InstanceSecurityGroup' }]]
+        - Namespace: aws:ec2:vpc
+          OptionName: AssociatePublicIpAddress
+          Value: true
+          ResourceName: AWSEBAutoScalingLaunchConfiguration
+        - Namespace: 'aws:autoscaling:launchconfiguration'
+          OptionName: 'EC2KeyName'
+          Value: 'cfn-admin'
+          ResourceName: 'AWSEBAutoScalingLaunchConfiguration'
+        - Namespace: aws:cloudformation:template:parameter
+          OptionName: InstancePort
+          Value: '80'
+        - Namespace: aws:ec2:vpc
+          OptionName: Subnets
+          ResourceName: AWSEBAutoScalingGroup
+          Value: !Join [',', [!ImportValue 'cfn-region-SubnetA', !ImportValue 'cfn-region-SubnetB']]
+        - Namespace: aws:ec2:vpc
+          OptionName: VPCId
+          ResourceName: AWSEBSecurityGroup
+          Value: !ImportValue 'cfn-region-VpcId'
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: DeleteOnTerminate
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: RetentionInDays
+          Value: '7'
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: StreamLogs
+          Value: 'false'
+        - Namespace: aws:elasticbeanstalk:command
+          OptionName: BatchSize
+          Value: '100'
+        - Namespace: aws:elasticbeanstalk:command
+          OptionName: BatchSizeType
+          Value: Percentage
+        - Namespace: aws:elasticbeanstalk:command
+          OptionName: IgnoreHealthCheck
+          Value: 'false'
+        - Namespace: aws:elasticbeanstalk:command
+          OptionName: Timeout
+          Value: '600'
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: allow_url_fopen
+          Value: 'On'
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: composer_options
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: display_errors
+          Value: 'Off'
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: document_root
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: max_execution_time
+          Value: '60'
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: memory_limit
+          Value: 256M
+        - Namespace: aws:elasticbeanstalk:container:php:phpini
+          OptionName: zlib.output_compression
+          Value: 'Off'
+        - Namespace: aws:elasticbeanstalk:control
+          OptionName: DefaultSSHPort
+          Value: '22'
+        - Namespace: aws:elasticbeanstalk:control
+          OptionName: LaunchTimeout
+          Value: '0'
+        - Namespace: aws:elasticbeanstalk:control
+          OptionName: LaunchType
+          Value: Migration
+        - Namespace: aws:elasticbeanstalk:control
+          OptionName: RollbackLaunchOnFailure
+          Value: 'false'
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: ServiceRole
+          Value: elasticbeanstalk-role
+        - Namespace: aws:elasticbeanstalk:healthreporting:system
+          OptionName: SystemType
+          Value: enhanced
+        - Namespace: aws:elasticbeanstalk:healthreporting:system
+          OptionName: HealthCheckSuccessThreshold
+          Value: Ok
+        - Namespace: aws:elasticbeanstalk:monitoring
+          OptionName: Automatically Terminate Unhealthy Instances
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'APPLICATION'
+          Value: !Ref 'ProjectStack'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'ASSET_STORE'
+          Value: !ImportValue 'cfn-region-AssetStore'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'REGION'
+          Value: !Ref 'AWS::Region'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'AWS_DEFAULT_REGION'
+          Value: !Ref 'AWS::Region'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'ENABLE_XDEBUG'
+          Value: '1'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'COMPOSER_HOME'
+          Value: '/tmp/composer/'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'DRUPAL_DB_HOSTNAME'
+          Value: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-Hostname'  }
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'DRUPAL_DB_PORT'
+          Value: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-Port' }
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'DRUPAL_DB_USERNAME'
+          Value: !GetAtt MySQLDatabase.Username
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'DRUPAL_DB_PASSWORD'
+          Value: !GetAtt MySQLDatabase.EncryptedPassword
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'DRUPAL_DB_NAME'
+          Value: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
       SolutionStackName: !Ref 'SolutionStackName'
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -211,68 +209,70 @@ Resources:
         IpProtocol: tcp
         FromPort: '443'
         ToPort: '443'
-      VpcId: !ImportValue [!Sub 'cfn-region-VpcId']
+      VpcId: {"Fn::ImportValue": !Sub 'cfn-region-VpcId' }
   EC2Role:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
         - Action: ['sts:AssumeRole']
           Effect: Allow
           Principal:
             Service: [ec2.amazonaws.com]
-        Version: '2012-10-17'
       Path: /
+#      TODO limit s3 bucket access to only current application.
       Policies:
-      #TODO limit s3 bucket access to only current application.
-      - PolicyDocument:
-        Statement:
-          - Action:
-            - 's3:Get*'
-            - 's3:List*'
-            - 's3:PutObject'
-            - 's3:DeleteObject'
-            Effect: Allow
-            Resource:
-              - !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}'
-              - !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}/*'
-            Sid: BucketAccess
-          - Action:
-            - 'xray:PutTraceSegments'
-            - 'xray:PutTelemetryRecords'
-            Effect: Allow
-            Resource: '*'
-            Sid: XRayAccess
-          - Action:
-            - 'logs:PutLogEvents'
-            - 'logs:CreateLogStream'
-            Effect: Allow
-            Resource: [ 'arn:aws:logs:*:*:log-group:/aws/elasticbeanstalk*' ]
-            Sid: CloudWatchLogsAccess
-          - Action:
-            - 'ecs:Poll'
-            - 'ecs:StartTask'
-            - 'ecs:StopTask'
-            - 'ecs:DiscoverPollEndpoint'
-            - 'ecs:StartTelemetrySession'
-            - 'ecs:RegisterContainerInstance'
-            - 'ecs:DeregisterContainerInstance'
-            - 'ecs:DescribeContainerInstances'
-            - 'ecs:Submit*'
-            - 'ecs:DescribeTasks'
-            Effect: Allow
-            Resource: '*'
-            Sid: ECSAccess
-          - Action: ['kms:Decrypt']
-            Effect: Allow
-            Resource: !ImportValue 'KMSKeyArn'
-            Condition:
-              'StringEquals':
-                'kms:EncryptionContext:Application': !Ref 'ProjectStack'
-                'kms:EncryptionContext:Database': !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
-            Sid: KMSKeyGrant
-          Version: '2012-10-17'
-        PolicyName: !Sub '${ProjectStack}-${AWS::StackName}-ec2-role'
+        - PolicyName: !Sub '${ProjectStack}-${AWS::StackName}-ec2-role'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: BucketAccess
+                Action:
+                  - 's3:Get*'
+                  - 's3:List*'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}'
+                  - !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}/*'
+              - Sid: XRayAccess
+                Action:
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                Effect: Allow
+                Resource: '*'
+
+              - Sid: CloudWatchLogsAccess
+                Action:
+                  - 'logs:PutLogEvents'
+                  - 'logs:CreateLogStream'
+                Effect: Allow
+                Resource: [ 'arn:aws:logs:*:*:log-group:/aws/elasticbeanstalk*' ]
+
+              - Sid: ECSAccess
+                Action:
+                  - 'ecs:Poll'
+                  - 'ecs:StartTask'
+                  - 'ecs:StopTask'
+                  - 'ecs:DiscoverPollEndpoint'
+                  - 'ecs:StartTelemetrySession'
+                  - 'ecs:RegisterContainerInstance'
+                  - 'ecs:DeregisterContainerInstance'
+                  - 'ecs:DescribeContainerInstances'
+                  - 'ecs:Submit*'
+                  - 'ecs:DescribeTasks'
+                Effect: Allow
+                Resource: '*'
+              - Sid: KMSKeyGrant
+                Action: ['kms:Decrypt']
+                Effect: Allow
+                Resource: !ImportValue 'KMSKeyArn'
+                Condition:
+                  'StringEquals':
+                    'kms:EncryptionContext:Application': !Ref 'ProjectStack'
+                    'kms:EncryptionContext:Database': !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
   ElasticBeanstalkEnvironment:
     Type: AWS::ElasticBeanstalk::Environment
     DependsOn: 'DevelopmentConfigurationTemplate'
@@ -289,12 +289,12 @@ Resources:
       ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cfn-mysqldatabase'
       Application: !Ref 'ProjectStack'
       Database: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
-      Hostname: !ImportValue [ !Sub '${MySQLInstanceStack}-Hostname']
+      Hostname: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-Hostname' }
       KMSKeyARN: !ImportValue 'KMSKeyArn'
-      Port: !ImportValue [!Sub '${MySQLInstanceStack}-Port']
+      Port: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-Port' }
       RetainDatabase: !Ref 'RetainDatabase'
-      Username: !ImportValue [!Sub '${MySQLInstanceStack}-AdminUsername']
-      Password: !ImportValue [!Sub '${MySQLInstanceStack}-AdminPassword']
+      Username: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-AdminUsername'  }
+      Password: {"Fn::ImportValue": !Sub '${MySQLInstanceStack}-AdminPassword'  }
   CodePipeline:
     Type: AWS::CloudFormation::CustomResource
     DependsOn: 'ElasticBeanstalkEnvironment'
