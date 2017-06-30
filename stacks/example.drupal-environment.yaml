@@ -1,17 +1,17 @@
 Stack:
   Region: us-east-1
-  StackName: testenv
+  StackName: v1-someproject-com
   TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-environment.yaml'
   Capabilities:
-  - CAPABILITY_NAMED_IAM
+    - CAPABILITY_NAMED_IAM
   Parameters:
     DatabaseName: ''
     ProjectStack: 'testapp'
-    GitBranch: 'exp-eb'
+    GitBranch: 'prod-v1'
     GitOAuthToken: '<PERSONAL GIT OAUTH TOKEN>'
     GitRepository: 'jwilson8767/cohesivefire.nemac.org'
     InstanceType: 't2.nano'
-    MySQLInstanceStack: 'testmysql'
+    MySQLInstanceStack: 'drupal-mysql56'
     RetainDatabase: 'no'
-    SolutionStackName: '64bit Amazon Linux 2016.09 v2.3.0 running PHP 7.0'
+    SolutionStackName: '64bit Amazon Linux 2017.03 v2.7.1 running Multi-container Docker 17.03.1-ce (Generic)'
 

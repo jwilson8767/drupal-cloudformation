@@ -34,45 +34,25 @@ Parameters:
     Default: 3306
   MySQLVersion:
     Type: String
-    Description: 'Storage for the RDS instance in GB. Use `aws rds describe-db-engine-versions --engine=mysql --region=REGION` to see all versions'
+    Description: 'Use `aws rds describe-db-engine-versions --engine=mysql --region=REGION` to see all versions'
     AllowedValues: ['5.6.19a', '5.6.19b', '5.6.21', '5.6.21b', '5.6.22', '5.6.23', '5.6.27', '5.6.29', '5.6.34', '5.7.10', '5.7.11', '5.7.16']
     Default: '5.6.34'
 Resources:
   RDSInstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: 'Ingress from EC2 Instance Security Group and Developer Whitelist Security Group'
+      GroupDescription: ''
       SecurityGroupEgress:
       - {CidrIp: 0.0.0.0/0, IpProtocol: '-1'}
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: 'tcp'
+        FromPort: !Ref 'MySQLPort'
+        ToPort: !Ref 'MySQLPort'
       Tags:
       - Key: Name
         Value: !Sub 'cfn-rds-${AWS::StackName}'
       VpcId: !ImportValue 'cfn-region-VpcId'
-  RDSInstanceSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      SourceSecurityGroupId: !GetAtt 'EC2InstanceSecurityGroup.GroupId'
-      FromPort: !Ref 'MySQLPort'
-      ToPort: !Ref 'MySQLPort'
-      CidrIp: '0.0.0.0/0'
-      IpProtocol: 'tcp'
-  EC2InstanceSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: 'Egress to RDS Instance Security Group'
-      Tags:
-      - Key: Name
-        Value: !Sub 'cfn-rds-ec2-${AWS::StackName}'
-      VpcId: !ImportValue 'cfn-region-VpcId'
-  EC2InstanceSecurityGroupEgress:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      DestinationSecurityGroupId: !GetAtt 'RDSInstanceSecurityGroup.GroupId'
-      FromPort: '0'
-      ToPort: '65535'
-      GroupId:
-        !GetAtt 'EC2InstanceSecurityGroup.GroupId'
-      IpProtocol: 'tcp'
   EncryptedAdminPassword:
     Type: AWS::CloudFormation::CustomResource
     Properties:

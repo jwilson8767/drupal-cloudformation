@@ -1,6 +1,6 @@
 Stack:
   Region: us-east-1
-  StackName: testapp
+  StackName: someproject-com
   TemplateURL: 'https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml'
   Capabilities:
   - CAPABILITY_NAMED_IAM
