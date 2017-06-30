@@ -112,6 +112,21 @@ You must be in the `cfn-admins` IAM group to complete this.
     - Make sure to enter the correct branch.
     - If this environment will go into production at any point check "Retain Database" to ensure it is not cleaned up with the rest of the environment when it is deleted.
     - You should generate a [personal access](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) token with `repo` access.
+    - Ensure you set the IAM role to
+     `cloudformation-role`.
+   - Check I acknowledge that AWS cloudformation might create IAM resources.  (This is at the bottom of the confirmation page)
+   - The environment will take a few minutes to spin up and deploy, grab some coffee.
+11. Your environment should not be ready and functional. Connect to it using the link given in the output of the environment stack (or the Elastic Beanstalk console). Note that https is not yet implemented and that this section does not cover using Route53 to direct traffic to your environment.
+
+### <span id="new-project"></span>Starting a new project
+This requires you to be in the `cfn-developers` or `cfn-admins` IAM group.
+
+1. [Install Git](https://git-scm.com/downloads) on the computer you will be developing with.
+2. Create your new project:
+    - Fork the [Drupal Project Template Github Repository](https://github.com/jwilson8767/nemac-drupal-template/)
+    - Rename the repository to reflect the site or project
+    - Clone your fork to your local machine using the instructions provided by Github. (optional if you do not need to make any code/theme changes at this time.)
+3. <a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=someproject-com&templateURL=https://s3.amazonaws.com/nemac-cloudformation/master/templates/drupal-project.yaml">Click here to create a new Drupal Project stack.</a>
     - Ensure you set the IAM role to `cloudformation-role`.
    - Check I acknowledge that AWS Cloudformation might create IAM resources.  (This is at the bottom of the confirmation page)
    - The environment will take a few minutes to spin up and deploy, grab some coffee.
