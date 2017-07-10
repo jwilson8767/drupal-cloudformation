@@ -213,6 +213,9 @@ Resources:
           OptionName: 'REGION'
           Value: !Ref 'AWS::Region'
         - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'PROJECT_STACK'
+          Value: !Ref 'ProjectStack'
+        - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: 'AWS_DEFAULT_REGION'
           Value: !Ref 'AWS::Region'
         - Namespace: aws:elasticbeanstalk:application:environment

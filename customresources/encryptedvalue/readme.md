@@ -1,1 +1,1 @@
-This custom resource is super simple. All it does is encrypt values passed to it from CloudFormation using KMS and the specified KMS Key ARN.
+This custom resource is super simple. All it does is encrypt values passed to it from CloudFormation using KMS and the specified KMS Key ARN. See `templates/mysql-instance.yaml' for an example usage.

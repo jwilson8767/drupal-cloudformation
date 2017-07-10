@@ -23,7 +23,7 @@ Logs are output to [CloudWatch](https://console.aws.amazon.com/cloudwatch/home?r
 
 ## Gotcha's
 - Lambda functions inside a VPC only access AWS services which have an endpoint in that VPC. Currently S3 is the only AWS service to have an endpoint in every VPC by default. For this reason I recommend only creating Lambda functions outside VPCs. If they need to interact with resources inside a VPC, use security groups to allow them to do so.
-- `kappa.yml` contains developer-specific values by design and requires customization before using Kappa.
+- `kappa.yml` contains developer-specific values (awscli profile, region, etc) by design and requires customization before using Kappa.
 
 ## Further reading
 AWS Lambda functions are incredibly powerful, but most of the most relevant documentation is buried, so here are some resources that may be helpful:

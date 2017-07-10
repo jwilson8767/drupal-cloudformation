@@ -137,6 +137,9 @@ To delete a stack, first delete dependant stacks, then use the `Delete Stack` bu
  
  **If a deletion fails**: Note the resources that failed to delete (usually just one or two) by type and ids, remove each one manually using the relevant console, then re-attempt the deletion.
  
+# <span id="tracking-costs"></span>Tracking Costs
+Every resource created by each stack is given tags that allow it to be identified in the AWS Cost Explorer and related billing tools. See also: the [AWS Billing docs](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/billing-what-is.html)
+
 # <span id="develop-manage"></span>Development and Management
 
 ## <span id="dev-requirements"></span>Development/CLI usage Requirements
@@ -170,8 +173,6 @@ Login to the AWS Elastic Beanstalk Console, review the event log or download ful
 Usually this is an application-level bug, so first check your Drupal configuration. Additionally, the AWS Elastic Beanstalk console will provide you with error logs that may be helpful.
 #### No-response (timeout)
 Verify the DNS entries are correct for the domain you are attempting to visit, then verify that the Elastic Beanstalk environment has a running instance, then review the logs for the environment.
-#### HTTPS issues
-<!-- TODO HTTPS troubleshooting docs -->
 #### Failure to build new Elastic Beanstalk Environment from template
 If a stack fails to deploy, first review its logs as often they will say exactly which resource failed. If the resource is in another stack, then troubleshoot that stack/resource directly, if it is part of the stack that failed to deploy then the issue may be in the parameters supplied when creating the new stack. Re-create the stack with corrected parameters. If that still doesn't work then troubleshoot the template directly to resolve issues with the specific resource that is failing.
 
@@ -191,14 +192,14 @@ In order of estimated cost/complexity, low to high:
     * EC2 instances can take 5+ minutes to spin up.
 * Sometimes a failed creation or deletion will hang (especially if a resource is deleted outside of CloudFormation), but using `aws cloudformation delete-stack --stack-name NAME --retain-resources` will usually delete it immediately. If that doesn't work, wait 10 minutes and the stack will go to a "FAILED" status and should be able to be deleted using the command above.
 * CodePipeline must be manually told to retry failed deployments or a new commit must be pushed.
-* Elastic Beanstalk Environments are normally very stable, but in the event of an instance being terminated, it can take up to 10 minutes for a new instance to be fully provisioned. That said, sometimes the best way to get a failing environment back to stable is to terminate the offending instances and let EB start fresh on a new instance.
+* Elastic Beanstalk Environments are normally very stable, but in the event of an instance being terminated, it can take up to 10 minutes for a new instance to be fully provisioned. Reboot instead of terminating whenever possible.
 * Avoid the CloudFormation Designer, it's useless and creates buckets for no reason.
 
 # Next steps for this project:
 - Move this and nemac-drupal-project git repos to NEMAC repo.
 - Setup an access token to NEMAC's GitHub organization, pass to codepipeline as default.
-- Fully migrate an entire site.
 - Use this project in a new project.
+- Fully migrate an entire site.
 
 # <span id="further-reading"></span>Further reading
 - The nemac-drupal-project readme
