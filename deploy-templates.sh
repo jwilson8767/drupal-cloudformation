@@ -5,6 +5,12 @@
 #   deploy bucket-name [file]
 # If file is omitted, then all will be deployed.
 #
+
+if ! type "aws" > /dev/null; then
+  echo "awscli not install. Exiting."
+  exit 1
+fi
+
 if [ -z "$1" ]; then
     bucket="nemac-cloudformation"
 fi

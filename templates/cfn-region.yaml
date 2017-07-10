@@ -4,12 +4,15 @@ Parameters:
   ExistingArtifactBucket:
     Description: 'If an artifact bucket already exists, enter its name here. (Must be in this region)'
     Type: String
+    Default: ''
   ExistingAssetBucket:
     Description: 'If an asset bucket already exists, enter its name here. (Must be in this region)'
     Type: String
+    Default: ''
   ExistingSecretsBucket:
     Description: 'If a secrets bucket already exists, enter its name here. (Does not need to be in this region)'
     Type: String
+    Default: ''
 Conditions:
   NotHasExistingArtifactBucket: !Equals [!Ref 'ExistingArtifactBucket', '']
   NotHasExistingAssetBucket: !Equals [!Ref 'ExistingAssetBucket', '']
@@ -22,7 +25,7 @@ Resources:
     DeletionPolicy: 'Delete'
     Properties:
       BucketName: !Sub 'nemac-artifacts-${AWS::Region}'
-  # The Asset Bucket is used for static assets that should be publicly accessible.
+  # The Asset Bucket is used for static assets that should be publicly accessible and be persisted between instances.
   AssetBucket:
     Type: AWS::S3::Bucket
     Condition: NotHasExistingAssetBucket
@@ -48,72 +51,25 @@ Resources:
     DeletionPolicy: 'Retain'
     Properties:
       BucketName: !Sub 'nemac-secrets-${AWS::Region}'
-# TODO Fix this.
-#  SecretsBucketPolicy:
-#    Type: AWS::S3::BucketPolicy
-#    DependsOn: SecretsBucket
-#    Condition: NotHasExistingSecretsBucket
-#    DeletionPolicy: 'Retain'
-#    Properties:
-#      Bucket: !Sub 'nemac-secrets-${AWS::Region}'
-#      PolicyDocument:
-#        Version: '2012-10-17'
-#        Statement:
-#          - Effect: "Deny"
-#            Principal: "*"
-#            Action: "s3:*"
-#            Resource:
-#              - "arn:aws:s3:::nemac-secrets"
-#              - "arn:aws:s3:::nemac-secrets/*"
-#            Condition:
-#              StringNotLike:
-#                aws:userId:
-#                  - "AROAJ6WATZNOFV7HFZ5WA:*"
-#                  - "AROAJTCC6ELV5J4SCDZBI:*"
-#                  - "AIDAIC5NTOUZ76EAYKHXC"
-#          - Sid: "AllowListDirectory-live-nemac-org"
-#            Effect: "Allow"
-#            Principal: {AWS: "arn:aws:iam::479394595410:role/live-nemac-org"}
-#            Action: "s3:ListBucket"
-#            Resource:
-#              - "arn:aws:s3:::nemac-secrets"
-#              - "arn:aws:s3:::nemac-secrets/*"
-#            Condition: { StringLike: { "s3:prefix": "live-nemac-org/*"}}
-#          - Sid: "AllowGetPut-live-nemac-org"
-#            Effect:  "Allow"
-#            Principal: {AWS: "arn:aws:iam::479394595410:role/live-nemac-org"}
-#            Action:
-#              - "s3:GetObject"
-#              - "s3:GetObjectVersion"
-#              - "s3:PutObject"
-#              - "s3:DeleteObject"
-#            Resource: "arn:aws:s3:::nemac-secrets/live-nemac-org/*"
-#          - Sid: "AllowListDirectory-staging-nemac-org"
-#            Effect: "Allow"
-#            Principal: {AWS: "arn:aws:iam::479394595410:role/staging-nemac-org"}
-#            Action: "s3:ListBucket"
-#            Resource: ["arn:aws:s3:::nemac-secrets",
-#            "arn:aws:s3:::nemac-secrets/*"]
-#            Condition:  {StringLike: {"s3:prefix": "staging-nemac-org/*"}}
-#          - Sid: "AllowGetPut-staging-nemac-org"
-#            Effect: "Allow"
-#            Principal:  {AWS: "arn:aws:iam::479394595410:role/staging-nemac-org"}
-#            Action:
-#            - "s3:GetObject"
-#            - "s3:GetObjectVersion"
-#            - "s3:PutObject"
-#            - "s3:DeleteObject"
-#            Resource: "arn:aws:s3:::nemac-secrets/staging-nemac-org/*"
   # VPC for all CloudFormation resources in this region.
   VPC:
+    Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: '172.17.0.0/16'
+      CidrBlock: '172.18.0.0/16'
       EnableDnsHostnames: 'true'
       EnableDnsSupport: 'true'
       Tags:
       - Key: 'Name'
         Value: !Ref AWS::StackName
-    Type: AWS::EC2::VPC
+  DHCPOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainNameServers: [ "AmazonProvidedDNS" ]
+  DHCPOptionsAttachment:
+    Type: "AWS::EC2::VPCDHCPOptionsAssociation"
+    Properties:
+      DhcpOptionsId: !Ref DHCPOptions
+      VpcId: !Ref VPC
   # The InternetGateway allows egress from the VPC
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -145,10 +101,10 @@ Resources:
   # One subnet per Availability Zone is sufficient for drupal web servers.
   SubnetA:
     Type: AWS::EC2::Subnet
-    DependsOn: VPC
+    DependsOn: [ VPC,  DHCPOptionsAttachment, InternetGatewayAttachment ]
     Properties:
-      AvailabilityZone: !Sub '${AWS::Region}a'
-      CidrBlock: '172.17.0.0/22'
+      AvailabilityZone: { "Fn::Select" : ["0", { "Fn::GetAZs" : { "Ref" : "AWS::Region" } }]}
+      CidrBlock: '172.18.0.0/22'
       MapPublicIpOnLaunch: 'false'
       VpcId: !Ref VPC
   SubnetARouteTableAssociation:
@@ -159,18 +115,18 @@ Resources:
       SubnetId: !Ref SubnetA
   SubnetB:
     Type: AWS::EC2::Subnet
-    DependsOn: VPC
+    DependsOn: [ VPC,  DHCPOptionsAttachment, InternetGatewayAttachment ]
     Properties:
-      AvailabilityZone: !Sub '${AWS::Region}b'
-      CidrBlock: '172.17.4.0/22'
+      AvailabilityZone: { "Fn::Select" : ["1", { "Fn::GetAZs" : { "Ref" : "AWS::Region" } }]}
+      CidrBlock: '172.18.4.0/22'
       MapPublicIpOnLaunch: 'false'
       VpcId: !Ref VPC
   SubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     DependsOn: ['InternetGateway', 'SubnetB']
     Properties:
       RouteTableId: !Ref InternetGatewayRouteTable
       SubnetId: !Ref SubnetB
-    Type: AWS::EC2::SubnetRouteTableAssociation
   # Defines Security Groups RDS can create endpoints in.
   RDSSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -197,6 +153,11 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-AssetStoreUrl'
     Value: !If ['NotHasExistingAssetBucket', !GetAtt 'AssetBucket.DomainName', !Sub 'https://s3.amazonaws.com/${ExistingAssetBucket}/']
+  SecretsStore:
+    Description: 'S3 Bucket name'
+    Export:
+      Name: !Sub '${AWS::StackName}-SecretsStore'
+    Value: !If ['NotHasExistingSecretsBucket',!Sub 'nemac-secrets-${AWS::Region}',!Ref ExistingAssetBucket]
   VpcId:
     Description: 'VpcId'
     Export:

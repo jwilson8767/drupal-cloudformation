@@ -36,7 +36,7 @@ def handler(event, context):
             response = update(database=event['ResourceProperties']['Database'],
                               old_database=event['OldResourceProperties']['Database'], username=event['PhysicalResourceId'])
         elif event['RequestType'] == 'Delete':
-            if event['ResourceProperties']['RetainDatabase'] == 'no':
+            if event['ResourceProperties']['RetainDatabase'] == 'false':
                 delete(database=event['ResourceProperties']['Database'], username=event['PhysicalResourceId'])
             else:
                 print('Retaining Database.')

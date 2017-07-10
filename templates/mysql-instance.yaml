@@ -1,5 +1,18 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'A MySQL RDS instance which can be used by other stacks'
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: MySQL Config
+        Parameters:
+          - AdminUsername
+          - AdminPassword
+          - MySQLPort
+          - MySQLVersion
+      - Label: Instance Config
+        Parameters:
+          - InstanceType
+          - AllocatedStorage
 Parameters:
   AdminPassword: 
     Type: String
@@ -41,9 +54,10 @@ Resources:
   RDSInstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: ''
+      GroupDescription: 'rds group'
       SecurityGroupEgress:
-      - {CidrIp: 0.0.0.0/0, IpProtocol: '-1'}
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: '-1'
       SecurityGroupIngress:
       - CidrIp: 0.0.0.0/0
         IpProtocol: 'tcp'

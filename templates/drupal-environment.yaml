@@ -1,6 +1,38 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'A Drupal Environment'
+Description: 'A Nemac-Drupal environment.'
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: Stack Config
+        Parameters:
+          - ProjectStack
+          - PrimaryDomain
+          - AlternateDomains
+          - InstanceType
+          - SolutionStackName
+          - EnableDebugging
+          - EnableHTTPS
+          - ForceHTTPS
+          - AdminEmail
+      - Label: Database Config
+        Parameters:
+          - MySQLInstanceStack
+          - DatabaseName
+          - RetainDatabase
+      - Label: Git Config
+        Parameters:
+          - GitRepository
+          - GitBranch
+          - GitOAuthToken
 Parameters:
+  PrimaryDomain:
+    Type: String
+    Description: 'The primary domain name for which a SSL cert will be registered. Setting this does not update Route53/DNS.'
+    Default: ''
+  AlternateDomains:
+    Type: String
+    Description: 'Comma-separated list of alternate domain names/CNAMES for this project.'
+    Default: ''
   DatabaseName:
     Type: String
     Description: 'Leave blank to use stack name. If a database with this name already exists it will be used rather
@@ -14,7 +46,7 @@ Parameters:
     AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$'
   GitBranch:
     Type: String
-    Description: 'The Git branch this environment should pull from.'
+    Description: 'The Git branch this environment should follow.'
     MinLength: 1
   GitRepository:
     Type: String
@@ -22,7 +54,7 @@ Parameters:
     MinLength: 1
   GitOAuthToken:
     Type: String
-    Description: 'The Github Oauth Token to use to access this repository. Not required if the repository is owned by nemac.'
+    Description: 'The Github Oauth Token to use to access the project repository.'
     NoEcho: true
     Default: ''
   InstanceType:
@@ -39,15 +71,35 @@ Parameters:
     MinLength: 1
   RetainDatabase:
     Type: String
-    Default: 'no'
+    Default: 'false'
     Description: 'Keep the database when this environment is deleted.'
-    AllowedValues: ['yes', 'no']
+    AllowedValues: ['true', 'false']
+  EnableHTTPS:
+    Type: String
+    Default: 'false'
+    Description: 'Enables HTTPS, automatically registers a certificate from LetsEncrypt. Requires AdminEmail.'
+    AllowedValues: ['true', 'false']
+  ForceHTTPS:
+    Type: String
+    Default: 'false'
+    Description: 'Turns on HSTS and redirects HTTP traffic to HTTPS. Verify that HTTPS is working before enabling this. Do not enable on initial creation.'
+    AllowedValues: ['true', 'false']
+  AdminEmail:
+    Type: String
+    Default: ''
+    Description: 'Required for SSL Cert registration by LetsEncrypt. Not required if HTTPS disabled.'
   SolutionStackName:
     Type: String
-    Default: '64bit Amazon Linux 2016.03 v2.1.6 running Multi-container Docker 1.11.2 (Generic)'
+    Default: '64bit Amazon Linux 2017.03 v2.7.1 running Multi-container Docker 17.03.1-ce (Generic)'
     Description: 'The ElasticBeanstalk Solution Stack to use for this environment. Use `aws elasticbeanstalk list-available-solution-stacks | grep "Multi-container Docker"` to see valid options'
+  EnableDebugging:
+    Type: String
+    Default: 'false'
+    Description: 'Turns on php error output, xdebug, and prevents failing instances from being replaced.'
+    AllowedValues: ['true','false']
 Conditions:
   HasDatabaseName: !Not [!Equals [!Ref 'DatabaseName', '']]
+  HasPrimaryDomain: !Not [!Equals [!Ref 'PrimaryDomain', '']]
 Resources:
   SingleInstanceConfigurationTemplate:
     Type: AWS::ElasticBeanstalk::ConfigurationTemplate
@@ -120,7 +172,7 @@ Resources:
           Value: Migration
         - Namespace: aws:elasticbeanstalk:control
           OptionName: RollbackLaunchOnFailure
-          Value: 'false'
+          Value: 'true'
         - Namespace: aws:elasticbeanstalk:environment
           OptionName: ServiceRole
           Value: elasticbeanstalk-role
@@ -132,13 +184,31 @@ Resources:
           Value: 'Ok'
         - Namespace: aws:elasticbeanstalk:monitoring
           OptionName: Automatically Terminate Unhealthy Instances
-          Value: 'true'
+          Value: !Ref 'EnableDebugging'
         - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: 'APPLICATION'
-          Value: !Ref 'ProjectStack'
+          OptionName: 'ENABLE_HTTPS'
+          Value: !Ref 'EnableHTTPS'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'FORCE_HTTPS'
+          Value: !Ref 'ForceHTTPS'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'ADMIN_EMAIL'
+          Value: !Ref 'AdminEmail'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'PRIMARY_DOMAIN'
+          Value: !Ref 'PrimaryDomain'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'ALTERNATE_DOMAINS'
+          Value: !Ref 'AlternateDomains'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'SECRETS_STORE'
+          Value: !Join ['/', [!ImportValue 'cfn-region-SecretsStore', !Ref 'ProjectStack'] ]
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: 'SECRETS_KMS_KEY_ARN'
+          Value: !ImportValue 'KMSKeyArn'
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: 'ASSET_STORE'
-          Value: !ImportValue 'cfn-region-AssetStore'
+          Value: !Join ['/', [!ImportValue 'cfn-region-AssetStore', !Ref 'ProjectStack'] ]
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: 'REGION'
           Value: !Ref 'AWS::Region'
@@ -155,12 +225,11 @@ Resources:
           OptionName: 'DRUPAL_DB_USERNAME'
           Value: !GetAtt MySQLDatabase.Username
         - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: 'DRUPAL_DB_PASSWORD'
+          OptionName: 'DRUPAL_DB_PASSWORD_ENCRYPTED'
           Value: !GetAtt MySQLDatabase.EncryptedPassword
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: 'DRUPAL_DB_NAME'
           Value: !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
-
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     DependsOn: 'EC2Role'
@@ -173,7 +242,7 @@ Resources:
       GroupDescription: 'Allows EC2 instances to serve content over ports 80  and 443'
       SecurityGroupEgress:
       - CidrIp: 0.0.0.0/0
-        IpProtocol: tcp
+        IpProtocol: '-1'
         FromPort: '0'
         ToPort: '65535'
       SecurityGroupIngress:
@@ -197,13 +266,12 @@ Resources:
           Principal:
             Service: [ec2.amazonaws.com]
       Path: /
-#      TODO limit s3 bucket access to only current application.
       Policies:
         - PolicyName: !Sub '${ProjectStack}-${AWS::StackName}-ec2-role'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: BucketAccess
+              - Sid: AssetBucketAccess
                 Action:
                   - 's3:Get*'
                   - 's3:List*'
@@ -213,13 +281,28 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}'
                   - !Sub 'arn:aws:s3:::nemac-assets-${AWS::Region}/*'
+              - Sid: SecretsBucketList
+                Action:
+                  - 's3:List*'
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::nemac-secrets-${AWS::Region}'
+                  - !Sub 'arn:aws:s3:::nemac-secrets-${AWS::Region}/*'
+              - Sid: SecretsBucketAccess
+                Action:
+                  - 's3:Get*'
+                  - 's3:List*'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::nemac-secrets-${AWS::Region}/${ProjectStack}/*'
               - Sid: XRayAccess
                 Action:
                   - 'xray:PutTraceSegments'
                   - 'xray:PutTelemetryRecords'
                 Effect: Allow
                 Resource: '*'
-
               - Sid: CloudWatchLogsAccess
                 Action:
                   - 'logs:PutLogEvents'
@@ -229,17 +312,19 @@ Resources:
               - Sid: ECSAccess
                 Action:
                   - 'ecs:CreateCluster'
-                  - 'ecs:DeregisterContainerInstance'
                   - 'ecs:Describe*'
-                  - 'ecs:UpdateContainerInstancesState'
                   - 'ecs:DiscoverPollEndpoint'
                   - 'ecs:Poll'
+                  - 'ecs:DescribeContainerInstances'
                   - 'ecs:RegisterContainerInstance'
+                  - 'ecs:DeregisterContainerInstance'
+                  - 'ecs:UpdateContainerInstancesState'
                   - 'ecs:StartTelemetrySession'
                   - 'ecs:StartTask'
                   - 'ecs:StopTask'
                   - 'ecs:Submit*'
                   - 'ecr:ListImages'
+                  - 'ecs:DescribeTasks'
                   - 'ecr:DescribeImages'
                   - 'ecr:GetAuthorizationToken'
                   - 'ecr:BatchCheckLayerAvailability'
@@ -247,7 +332,7 @@ Resources:
                   - 'ecr:BatchGetImage'
                 Effect: Allow
                 Resource: '*'
-              - Sid: KMSKeyGrant
+              - Sid: KMSKeyGrantForDBPassword
                 Action: ['kms:Decrypt']
                 Effect: Allow
                 Resource: !ImportValue 'KMSKeyArn'
@@ -255,6 +340,14 @@ Resources:
                   'StringEquals':
                     'kms:EncryptionContext:Application': !Ref 'ProjectStack'
                     'kms:EncryptionContext:Database': !If ['HasDatabaseName', !Ref 'DatabaseName', !Ref 'AWS::StackName']
+              - Sid: KMSKeyGrantForSSLCerts
+                Action: ['kms:Decrypt', 'kms:GenerateDataKey', 'kms:Encrypt']
+                Effect: Allow
+                Resource: !ImportValue 'KMSKeyArn'
+                Condition:
+                  'StringEquals':
+                    'kms:EncryptionContext:Application': !Ref 'ProjectStack'
+                    'kms:EncryptionContext:PrimaryDomain': !If ['HasPrimaryDomain', !Ref 'PrimaryDomain', !Ref 'AWS::StackName']
   ElasticBeanstalkEnvironment:
     Type: AWS::ElasticBeanstalk::Environment
     DependsOn: 'SingleInstanceConfigurationTemplate'
